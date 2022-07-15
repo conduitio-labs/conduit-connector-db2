@@ -99,7 +99,7 @@ func (w *Writer) delete(ctx context.Context, record sdk.Record) error {
 		return fmt.Errorf("build delete query: %w", err)
 	}
 
-	_, err = w.db.ExecContext(ctx, query, args)
+	_, err = w.db.ExecContext(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("exec delete: %w", err)
 	}

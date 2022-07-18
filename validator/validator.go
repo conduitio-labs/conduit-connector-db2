@@ -44,8 +44,6 @@ func Validate(data any) error {
 			switch e.Tag() {
 			case "required":
 				err = multierr.Append(err, requiredErr(fieldName))
-			case "hostname_port":
-				err = multierr.Append(err, hostnamePortErr(fieldName))
 			case "max":
 				err = multierr.Append(err, maxErr(fieldName, e.Param()))
 			}
@@ -58,11 +56,6 @@ func Validate(data any) error {
 // requiredErr returns the formatted required error.
 func requiredErr(name string) error {
 	return fmt.Errorf("%q value must be set", name)
-}
-
-// hostnamePortErr returns the formatted hostname_port error.
-func hostnamePortErr(name string) error {
-	return fmt.Errorf("%q value must be in the form hostname:port", name)
 }
 
 // maxErr returns the formatted max error.

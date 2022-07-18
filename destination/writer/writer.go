@@ -32,6 +32,9 @@ const (
 
 	// action names.
 	actionDelete = "delete"
+
+	// placeholder.
+	placeholder = "?"
 )
 
 // Writer implements a writer logic for db2 destination.
@@ -143,7 +146,7 @@ func (w *Writer) upsert(ctx context.Context, record sdk.Record) error {
 		return fmt.Errorf("get key column: %w", err)
 	}
 
-	// if the record doesn't contain the key, insert the key if it's not empty
+	// if the record doesn't contain the key, insert the key if it's not empty.
 	if _, ok := payload[keyColumn]; !ok {
 		if _, ok := key[keyColumn]; ok {
 			payload[keyColumn] = key[keyColumn]
@@ -258,7 +261,7 @@ func (w *Writer) buildUpsertQuery(
 func setPlaceholders(count int) string {
 	sl := make([]string, count)
 	for i := range sl {
-		sl[i] = "?"
+		sl[i] = placeholder
 	}
 
 	return strings.Join(sl, ",")
@@ -271,7 +274,7 @@ func setUpdateQuery(columns []string) string {
 		str[i] = strings.ReplaceAll("tab.{col} = merge.{col}", "{col}", v)
 	}
 
-	return " UPDATE SET " + strings.Join(str, ", ")
+	return fmt.Sprintf(" UPDATE SET %s ", strings.Join(str, ", "))
 }
 
 func setInsertQuery(columns []string) string {

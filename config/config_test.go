@@ -88,7 +88,8 @@ func TestParse(t *testing.T) {
 			args: args{
 				cfg: map[string]string{
 					KeyConnection: "HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=pwd",
-					KeyTable:      "gigiurhhjjejbjhhiuiuyiuyuiyiuhkjkjmhkjhjjvnbvghcgftfiuhpobjhbvbnvbnvhgfgkjjkhjkbhjvhghgfghfhgcbvjhguiyuikhjbmbvhvghftyfyrdryyyrryhhncfgfhfjfgjfgj",
+					KeyTable: "gigiurhhjjejbjhhiuiuyiuyuiyiuhkjkjmhkjhjjvnbvghcgftfiuhpobjhbvbnvbnvhgfgkjjkhjkbhjv" +
+						"hghgfghfhgcbvjhguiyuikhjbmbvhvghftyfyrdryyyrryhhncfgfhfjfgjfgj",
 					KeyPrimaryKey: "id",
 				},
 			},

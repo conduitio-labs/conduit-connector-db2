@@ -32,7 +32,7 @@ func TestParse(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "success, required and default fields",
+			name: "success",
 			args: args{
 				cfg: map[string]string{
 					KeyConnection: "HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=pwd",

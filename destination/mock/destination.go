@@ -8,7 +8,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	conduit_connector_sdk "github.com/conduitio/conduit-connector-sdk"
+	sdk "github.com/conduitio/conduit-connector-sdk"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -50,7 +50,7 @@ func (mr *MockWriterMockRecorder) Close(ctx interface{}) *gomock.Call {
 }
 
 // InsertRecord mocks base method.
-func (m *MockWriter) InsertRecord(ctx context.Context, record conduit_connector_sdk.Record) error {
+func (m *MockWriter) InsertRecord(ctx context.Context, record sdk.Record) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "InsertRecord", ctx, record)
 	ret0, _ := ret[0].(error)

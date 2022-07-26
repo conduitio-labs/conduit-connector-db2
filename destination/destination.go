@@ -35,8 +35,8 @@ type Destination struct {
 	config config.Config
 }
 
-// NewDestination creates new instance of the Destination.
-func NewDestination() sdk.Destination {
+// New creates new instance of the Destination.
+func New() sdk.Destination {
 	return &Destination{}
 }
 

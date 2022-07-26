@@ -6,7 +6,7 @@ build:
 	go build -o conduit-connector-db2 cmd/db2/main.go
 
 test:
-	go test $(GOTEST_FLAGS) -race ./...
+	go test $(GOTEST_FLAGS) -race -gcflags=all=-d=checkptr=0 ./...
 
 lint:
 	$(GOLINT) run --timeout=5m -c .golangci.yml

@@ -19,5 +19,6 @@ import (
 )
 
 var (
-	ErrKeyIsNotExist = errors.New("key is not exist")
+	ErrKeyIsNotExist            = errors.New("key is not exist")
+	ErrOrderingColumnIsNotExist = errors.New("ordering column is not exist")
 )

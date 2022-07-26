@@ -16,6 +16,7 @@ package config
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/conduitio-labs/conduit-connector-db2/validator"
 )
@@ -42,7 +43,7 @@ func Parse(cfg map[string]string) (Config, error) {
 	config := Config{
 		Connection: cfg[KeyConnection],
 		Table:      cfg[KeyTable],
-		Key:        cfg[KeyPrimaryKey],
+		Key:        strings.ToUpper(cfg[KeyPrimaryKey]),
 	}
 
 	if err := validator.Validate(&config); err != nil {

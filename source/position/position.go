@@ -36,10 +36,8 @@ type Position struct {
 	IteratorType IteratorType
 
 	// Snapshot info.
-	// IndexInBatch - index position in current batch.
-	IndexInBatch int
-	// BatchID - batch id.
-	BatchID int
+	// LastProcessedVal - last processed value from ordering column.
+	LastProcessedVal any
 
 	// CDC information.
 	// RowNumber - the number of row.
@@ -50,25 +48,25 @@ type Position struct {
 }
 
 // ParseSDKPosition parses SDK position and returns Position.
-func ParseSDKPosition(p sdk.Position) (Position, error) {
+func ParseSDKPosition(p sdk.Position) (*Position, error) {
 	var pos Position
 
 	if p == nil {
-		return pos, nil
+		return nil, nil
 	}
 
 	err := json.Unmarshal(p, &pos)
 	if err != nil {
-		return pos, err
+		return nil, err
 	}
 
 	switch pos.IteratorType {
 	case TypeSnapshot:
-		return pos, nil
+		return &pos, nil
 	case TypeCDC:
-		return pos, nil
+		return &pos, nil
 	default:
-		return pos, fmt.Errorf("%w : %s", ErrUnknownIteratorType, pos.IteratorType)
+		return nil, fmt.Errorf("%w : %s", ErrUnknownIteratorType, pos.IteratorType)
 	}
 }
 

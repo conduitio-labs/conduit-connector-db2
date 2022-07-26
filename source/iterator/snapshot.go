@@ -21,110 +21,103 @@ import (
 	"time"
 
 	sdk "github.com/conduitio/conduit-connector-sdk"
+	"github.com/huandu/go-sqlbuilder"
+	"github.com/jmoiron/sqlx"
 
 	"github.com/conduitio-labs/conduit-connector-db2/source/position"
 )
 
+// SnapshotIterator - snapshot iterator.
 type SnapshotIterator struct {
-	// repository for run queries to snowflake.
-	repository Repository
+	db   *sqlx.DB
+	rows *sqlx.Rows
 
-	// table - table in snowflake for getting currentBatch.
+	// table - table name.
 	table string
 	// columns list of table columns for record payload
 	// if empty - will get all columns.
 	columns []string
-	// Name of column what iterator use for setting key in record.
+	// key Name of column what iterator use for setting key in record.
 	key string
-
-	// index - current index of element in current batch which iterator converts to record
-	index int
-	// offset - current offset, show what batch iterator uses, using in query to get currentBatch.
-	offset int
+	// orderingColumn Name of column what iterator use for sorting data.
+	orderingColumn string
 	// batchSize size of batch.
 	batchSize int
-
-	// currentBatch - rows in current batch from table.
-	currentBatch []map[string]interface{}
+	// position last recorded position.
+	position *position.Position
 }
 
-// NewSnapshotIterator iterator.
 func NewSnapshotIterator(
-	repository Repository,
-	table string,
+	ctx context.Context,
+	db *sqlx.DB,
+	table, orderingColumn, key string,
 	columns []string,
-	key string,
-	index, offset, batchSize int,
-	currentBatch []map[string]interface{},
-) *SnapshotIterator {
-	return &SnapshotIterator{
-		repository:   repository,
-		table:        table,
-		columns:      columns,
-		key:          key,
-		index:        index,
-		offset:       offset,
-		batchSize:    batchSize,
-		currentBatch: currentBatch,
+	batchSize int,
+	position *position.Position,
+) (*SnapshotIterator, error) {
+	snapshotIterator := &SnapshotIterator{
+		db:             db,
+		table:          table,
+		columns:        columns,
+		key:            key,
+		orderingColumn: orderingColumn,
+		batchSize:      batchSize,
+		position:       position,
 	}
+
+	err := snapshotIterator.loadRows(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("load rows: %w", err)
+	}
+
+	return snapshotIterator, nil
 }
 
 // HasNext check ability to get next record.
 func (i *SnapshotIterator) HasNext(ctx context.Context) (bool, error) {
-	var err error
-
-	if i.index < len(i.currentBatch) {
+	if i.rows != nil && i.rows.Next() {
 		return true, nil
 	}
 
-	if i.index >= i.batchSize {
-		i.offset += i.batchSize
-		i.index = 0
+	if err := i.loadRows(ctx); err != nil {
+		return false, fmt.Errorf("load rows: %w", err)
 	}
 
-	i.currentBatch, err = i.repository.GetData(ctx, i.table, i.key, i.columns, i.offset, i.batchSize)
-	if err != nil {
-		return false, err
-	}
-
-	if len(i.currentBatch) == 0 || len(i.currentBatch) <= i.index {
-		return false, nil
-	}
-
-	return true, nil
+	return false, nil
 }
 
 // Next get new record.
 func (i *SnapshotIterator) Next(ctx context.Context) (sdk.Record, error) {
-	var (
-		payload sdk.RawData
-		err     error
-	)
+	row := make(map[string]any)
+	if err := i.rows.MapScan(row); err != nil {
+		return sdk.Record{}, fmt.Errorf("scan rows: %w", err)
+	}
+
+	if _, ok := row[i.orderingColumn]; !ok {
+		return sdk.Record{}, ErrOrderingColumnIsNotExist
+	}
 
 	pos := position.Position{
-		IteratorType: position.TypeSnapshot,
-		IndexInBatch: i.index,
-		BatchID:      i.offset,
-		Time:         time.Now(),
+		IteratorType:     position.TypeSnapshot,
+		LastProcessedVal: row[i.orderingColumn],
+		Time:             time.Now(),
 	}
-
-	payload, err = json.Marshal(i.currentBatch[i.index])
-	if err != nil {
-		return sdk.Record{}, fmt.Errorf("marshal error : %w", err)
-	}
-
-	if _, ok := i.currentBatch[i.index][i.key]; !ok {
-		return sdk.Record{}, ErrKeyIsNotExist
-	}
-
-	key := i.currentBatch[i.index][i.key]
 
 	convertedPosition, err := pos.ConvertToSDKPosition()
 	if err != nil {
-		return sdk.Record{}, fmt.Errorf("convert position: %w", err)
+		return sdk.Record{}, fmt.Errorf("convert position %w", err)
 	}
 
-	i.index++
+	if _, ok := row[i.key]; !ok {
+		return sdk.Record{}, ErrKeyIsNotExist
+	}
+
+	transformedRowBytes, err := json.Marshal(row)
+	if err != nil {
+		return sdk.Record{}, fmt.Errorf("marshal row: %w", err)
+	}
+
+	i.position = &pos
 
 	return sdk.Record{
 		Position: convertedPosition,
@@ -134,20 +127,54 @@ func (i *SnapshotIterator) Next(ctx context.Context) (sdk.Record, error) {
 		},
 		CreatedAt: time.Now(),
 		Key: sdk.StructuredData{
-			i.key: key,
+			i.key: row[i.key],
 		},
-		Payload: payload,
+		Payload: sdk.RawData(transformedRowBytes),
 	}, nil
 }
 
 // Stop shutdown iterator.
 func (i *SnapshotIterator) Stop() error {
-	return i.repository.Close()
+	return i.db.Close()
 }
 
 // Ack check if record with position was recorded.
 func (i *SnapshotIterator) Ack(ctx context.Context, rp sdk.Position) error {
 	sdk.Logger(ctx).Debug().Str("position", string(rp)).Msg("got ack")
+
+	return nil
+}
+
+// LoadRows selects a batch of rows from a database, based on the Iterator's
+// table, columns, orderingColumn, batchSize and the current position.
+func (i *SnapshotIterator) loadRows(ctx context.Context) error {
+	selectBuilder := sqlbuilder.NewSelectBuilder()
+
+	if len(i.columns) > 0 {
+		selectBuilder.Select(i.columns...)
+	} else {
+		selectBuilder.Select("*")
+	}
+
+	selectBuilder.From(i.table)
+
+	if i.position != nil {
+		selectBuilder.Where(
+			selectBuilder.GreaterThan(i.orderingColumn, i.position.LastProcessedVal),
+		)
+	}
+
+	sql, args := selectBuilder.
+		OrderBy(i.orderingColumn).
+		Limit(i.batchSize).
+		Build()
+
+	rows, err := i.db.QueryxContext(ctx, sql, args...)
+	if err != nil {
+		return fmt.Errorf("execute select query: %w", err)
+	}
+
+	i.rows = rows
 
 	return nil
 }

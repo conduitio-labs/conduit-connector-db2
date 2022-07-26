@@ -56,7 +56,7 @@ func Parse(cfg map[string]string) (Config, error) {
 
 	sourceConfig := Config{
 		Config:         common,
-		OrderingColumn: cfg[KeyOrderingColumn],
+		OrderingColumn: strings.ToUpper(cfg[KeyOrderingColumn]),
 		BatchSize:      defaultBatchSize,
 	}
 

@@ -19,15 +19,19 @@ import (
 	"fmt"
 
 	sdk "github.com/conduitio/conduit-connector-sdk"
+	"github.com/jmoiron/sqlx"
 
-	"github.com/conduitio-labs/conduit-connector-db2/config"
+	_ "github.com/ibmdb/go_ibm_db" //nolint:revive,nolintlint
+
+	"github.com/conduitio-labs/conduit-connector-db2/source/iterator"
+	"github.com/conduitio-labs/conduit-connector-db2/source/position"
 )
 
 // Source connector.
 type Source struct {
 	sdk.UnimplementedSource
 
-	config   config.Config
+	config   Config
 	iterator Iterator
 }
 
@@ -38,7 +42,7 @@ func New() sdk.Source {
 
 // Configure parses and stores configurations, returns an error in case of invalid configuration.
 func (s *Source) Configure(ctx context.Context, cfgRaw map[string]string) error {
-	cfg, err := config.Parse(cfgRaw)
+	cfg, err := Parse(cfgRaw)
 	if err != nil {
 		return err
 	}
@@ -50,6 +54,21 @@ func (s *Source) Configure(ctx context.Context, cfgRaw map[string]string) error 
 
 // Open prepare the plugin to start sending records from the given position.
 func (s *Source) Open(ctx context.Context, rp sdk.Position) error {
+	db, err := sqlx.Open("go_ibm_db", s.config.Connection)
+	if err != nil {
+		return err
+	}
+
+	pos, err := position.ParseSDKPosition(rp)
+	if err != nil {
+		return fmt.Errorf("parse position: %w", err)
+	}
+
+	s.iterator, err = iterator.NewSnapshotIterator(ctx, db, s.config.Table, s.config.OrderingColumn, s.config.Key,
+		s.config.Columns, s.config.BatchSize, pos)
+	if err != nil {
+		return fmt.Errorf("new snapshot iterator %w", err)
+	}
 
 	return nil
 }

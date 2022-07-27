@@ -12,12 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package position
+package coltypes
 
 import (
 	"errors"
+	"fmt"
 )
 
 var (
-	ErrUnknownIteratorType = errors.New("unknown iterator type")
+	// ErrCannotConvertValueToBytes occurs when a value cannot be converted into a byte slice.
+	ErrCannotConvertValueToBytes = errors.New("cannot convert value to byte slice")
+	// ErrCannotConvertValueToInt occurs when a value cannot be converted into an integer.
+	ErrCannotConvertValueToInt = errors.New("cannot convert value to int")
 )
+
+// convertValueToBytesErr returns the formatted ErrCannotConvertValueToBytes error.
+func convertValueToBytesErr(name string) error {
+	return fmt.Errorf("%w: %q", ErrCannotConvertValueToBytes, name)
+}

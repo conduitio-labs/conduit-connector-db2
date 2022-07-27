@@ -23,6 +23,4 @@ const (
 
 	// actionType names.
 	actionInsert actionType = "insertValue"
-	actionDelete actionType = "delete"
-	actionUpdate actionType = "update"
 )

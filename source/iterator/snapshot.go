@@ -24,6 +24,7 @@ import (
 	"github.com/huandu/go-sqlbuilder"
 	"github.com/jmoiron/sqlx"
 
+	"github.com/conduitio-labs/conduit-connector-db2/coltypes"
 	"github.com/conduitio-labs/conduit-connector-db2/source/position"
 )
 
@@ -45,6 +46,8 @@ type SnapshotIterator struct {
 	batchSize int
 	// position last recorded position.
 	position *position.Position
+	// columnTypes column types from table.
+	columnTypes map[string]string
 }
 
 func NewSnapshotIterator(
@@ -55,6 +58,8 @@ func NewSnapshotIterator(
 	batchSize int,
 	position *position.Position,
 ) (*SnapshotIterator, error) {
+	var err error
+
 	snapshotIterator := &SnapshotIterator{
 		db:             db,
 		table:          table,
@@ -65,7 +70,12 @@ func NewSnapshotIterator(
 		position:       position,
 	}
 
-	err := snapshotIterator.loadRows(ctx)
+	snapshotIterator.columnTypes, err = coltypes.GetColumnTypes(ctx, snapshotIterator.db, snapshotIterator.table)
+	if err != nil {
+		return nil, fmt.Errorf("get table column types: %w", err)
+	}
+
+	err = snapshotIterator.loadRows(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("load rows: %w", err)
 	}
@@ -93,13 +103,18 @@ func (i *SnapshotIterator) Next(ctx context.Context) (sdk.Record, error) {
 		return sdk.Record{}, fmt.Errorf("scan rows: %w", err)
 	}
 
-	if _, ok := row[i.orderingColumn]; !ok {
+	transformedRow, err := coltypes.TransformRow(ctx, row, i.columnTypes)
+	if err != nil {
+		return sdk.Record{}, fmt.Errorf("transform row column types: %w", err)
+	}
+
+	if _, ok := transformedRow[i.orderingColumn]; !ok {
 		return sdk.Record{}, ErrOrderingColumnIsNotExist
 	}
 
 	pos := position.Position{
 		IteratorType:     position.TypeSnapshot,
-		LastProcessedVal: row[i.orderingColumn],
+		LastProcessedVal: transformedRow[i.orderingColumn],
 		Time:             time.Now(),
 	}
 
@@ -108,11 +123,11 @@ func (i *SnapshotIterator) Next(ctx context.Context) (sdk.Record, error) {
 		return sdk.Record{}, fmt.Errorf("convert position %w", err)
 	}
 
-	if _, ok := row[i.key]; !ok {
+	if _, ok := transformedRow[i.key]; !ok {
 		return sdk.Record{}, ErrKeyIsNotExist
 	}
 
-	transformedRowBytes, err := json.Marshal(row)
+	transformedRowBytes, err := json.Marshal(transformedRow)
 	if err != nil {
 		return sdk.Record{}, fmt.Errorf("marshal row: %w", err)
 	}
@@ -127,7 +142,7 @@ func (i *SnapshotIterator) Next(ctx context.Context) (sdk.Record, error) {
 		},
 		CreatedAt: time.Now(),
 		Key: sdk.StructuredData{
-			i.key: row[i.key],
+			i.key: transformedRow[i.key],
 		},
 		Payload: sdk.RawData(transformedRowBytes),
 	}, nil
@@ -164,12 +179,12 @@ func (i *SnapshotIterator) loadRows(ctx context.Context) error {
 		)
 	}
 
-	sql, args := selectBuilder.
+	q, args := selectBuilder.
 		OrderBy(i.orderingColumn).
 		Limit(i.batchSize).
 		Build()
 
-	rows, err := i.db.QueryxContext(ctx, sql, args...)
+	rows, err := i.db.QueryxContext(ctx, q, args...)
 	if err != nil {
 		return fmt.Errorf("execute select query: %w", err)
 	}

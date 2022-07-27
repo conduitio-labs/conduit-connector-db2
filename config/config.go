@@ -42,7 +42,7 @@ type Config struct {
 func Parse(cfg map[string]string) (Config, error) {
 	config := Config{
 		Connection: cfg[KeyConnection],
-		Table:      cfg[KeyTable],
+		Table:      strings.ToUpper(cfg[KeyTable]),
 		Key:        strings.ToUpper(cfg[KeyPrimaryKey]),
 	}
 

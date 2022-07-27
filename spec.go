@@ -18,6 +18,7 @@ import (
 	sdk "github.com/conduitio/conduit-connector-sdk"
 
 	"github.com/conduitio-labs/conduit-connector-db2/config"
+	"github.com/conduitio-labs/conduit-connector-db2/source"
 )
 
 type Spec struct{}
@@ -27,10 +28,42 @@ func Specification() sdk.Specification {
 	return sdk.Specification{
 		Name:    "db2",
 		Summary: "The DB2 source and destination plugin for Conduit, written in Go.",
-		Description: "The Vitess connector is one of Conduit plugins. " +
+		Description: "The DB2 connector is one of Conduit plugins. " +
 			"It provides both, a source and a destination DB2 connector.",
 		Version: "v0.1.0",
 		Author:  "Meroxa, Inc.",
+		SourceParams: map[string]sdk.Parameter{
+			config.KeyConnection: {
+				Default:     "Connection string to DB2",
+				Required:    true,
+				Description: "",
+			},
+			config.KeyTable: {
+				Default:     "A name of the table that the connector should write to.",
+				Required:    true,
+				Description: "",
+			},
+			config.KeyPrimaryKey: {
+				Default:     "A name of column that connector will use for create record key",
+				Required:    true,
+				Description: "",
+			},
+			source.KeyOrderingColumn: {
+				Default:     "",
+				Required:    true,
+				Description: "A name of a column that the connector will use for ordering rows.",
+			},
+			source.KeyColumns: {
+				Default:     "",
+				Required:    false,
+				Description: "The list of column names that should be included in each Record's payload",
+			},
+			source.KeyBatchSize: {
+				Default:     "1000",
+				Required:    false,
+				Description: "The size of rows batch",
+			},
+		},
 		DestinationParams: map[string]sdk.Parameter{
 			config.KeyConnection: {
 				Default:     "Connection string to DB2",

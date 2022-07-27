@@ -107,6 +107,115 @@ func TestSource_Snapshot_Success(t *testing.T) {
 	}
 }
 
+func TestSource_Snapshot_Continue(t *testing.T) {
+	ctx := context.Background()
+
+	cfg, err := prepareConfig()
+	if err != nil {
+		t.Skip()
+	}
+
+	err = prepareData(ctx, cfg[config.KeyConnection])
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer clearData(ctx, cfg[config.KeyConnection]) // nolint:errcheck,nolintlint
+
+	s := new(Source)
+
+	err = s.Configure(ctx, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Start first time with nil position.
+	err = s.Open(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Check first read.
+	r, err := s.Read(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var wantedKey sdk.StructuredData
+	wantedKey = map[string]interface{}{"ID": int32(1)}
+
+	if !reflect.DeepEqual(r.Key, wantedKey) {
+		t.Fatal(errors.New("wrong record key"))
+	}
+
+	err = s.Teardown(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Open from previous position.
+	err = s.Open(ctx, r.Position)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	r, err = s.Read(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wantedKey = map[string]interface{}{"ID": int32(2)}
+
+	if !reflect.DeepEqual(r.Key, wantedKey) {
+		t.Fatal(errors.New("wrong record key"))
+	}
+
+	err = s.Teardown(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestSource_Snapshot_Empty_Table(t *testing.T) {
+	cfg, err := prepareConfig()
+	if err != nil {
+		t.Skip()
+	}
+
+	ctx := context.Background()
+
+	err = prepareEmptyTable(ctx, cfg[config.KeyConnection])
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer clearData(ctx, cfg[config.KeyConnection]) // nolint:errcheck,nolintlint
+
+	s := new(Source)
+
+	err = s.Configure(ctx, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Start first time with nil position.
+	err = s.Open(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Check read from empty table.
+	_, err = s.Read(ctx)
+	if err != sdk.ErrBackoffRetry {
+		t.Fatal(err)
+	}
+
+	err = s.Teardown(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func prepareConfig() (map[string]string, error) {
 	connection := os.Getenv("DB2_CONNECTION")
 
@@ -162,6 +271,27 @@ func clearData(ctx context.Context, conn string) error {
 	}
 
 	_, err = db.Exec(queryDropTable)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func prepareEmptyTable(ctx context.Context, conn string) error {
+	db, err := sql.Open("go_ibm_db", conn)
+	if err != nil {
+		return err
+	}
+
+	defer db.Close()
+
+	err = db.PingContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec(queryCreateTable)
 	if err != nil {
 		return err
 	}

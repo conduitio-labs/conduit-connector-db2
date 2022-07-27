@@ -150,7 +150,18 @@ func (i *SnapshotIterator) Next(ctx context.Context) (sdk.Record, error) {
 
 // Stop shutdown iterator.
 func (i *SnapshotIterator) Stop() error {
-	return i.db.Close()
+	if i.rows != nil {
+		err := i.rows.Close()
+		if err != nil {
+			return err
+		}
+	}
+
+	if i.db != nil {
+		return i.db.Close()
+	}
+
+	return nil
 }
 
 // Ack check if record with position was recorded.

@@ -12,17 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package db2
+package position
 
 import (
-	sdk "github.com/conduitio/conduit-connector-sdk"
-
-	"github.com/conduitio-labs/conduit-connector-db2/destination"
-	"github.com/conduitio-labs/conduit-connector-db2/source"
+	"errors"
 )
 
-var Connector = sdk.Connector{
-	NewSpecification: Specification,
-	NewSource:        source.New,
-	NewDestination:   destination.New,
-}
+var (
+	ErrUnknownIteratorType = errors.New("unknown iterator type")
+)

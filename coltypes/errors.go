@@ -12,17 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package db2
+package coltypes
 
 import (
-	sdk "github.com/conduitio/conduit-connector-sdk"
-
-	"github.com/conduitio-labs/conduit-connector-db2/destination"
-	"github.com/conduitio-labs/conduit-connector-db2/source"
+	"errors"
+	"fmt"
 )
 
-var Connector = sdk.Connector{
-	NewSpecification: Specification,
-	NewSource:        source.New,
-	NewDestination:   destination.New,
+var (
+	// ErrCannotConvertValueToBytes occurs when a value cannot be converted into a byte slice.
+	ErrCannotConvertValueToBytes = errors.New("cannot convert value to byte slice")
+	// ErrCannotConvertValueToInt occurs when a value cannot be converted into an integer.
+	ErrCannotConvertValueToInt = errors.New("cannot convert value to int")
+)
+
+// convertValueToBytesErr returns the formatted ErrCannotConvertValueToBytes error.
+func convertValueToBytesErr(name string) error {
+	return fmt.Errorf("%w: %q", ErrCannotConvertValueToBytes, name)
 }

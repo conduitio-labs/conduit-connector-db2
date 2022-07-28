@@ -46,8 +46,8 @@ func TestDestination_Configure(t *testing.T) {
 			args: args{
 				cfg: map[string]string{
 					config.KeyConnection: "HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=pwd",
-					config.KeyTable:      "clients",
-					config.KeyPrimaryKey: "id",
+					config.KeyTable:      "CLIENTS",
+					config.KeyPrimaryKey: "ID",
 				},
 			},
 			wantErr: false,
@@ -56,8 +56,8 @@ func TestDestination_Configure(t *testing.T) {
 			name: "fail, missing connection",
 			args: args{
 				cfg: map[string]string{
-					config.KeyTable:      "clients",
-					config.KeyPrimaryKey: "id",
+					config.KeyTable:      "CLIENTS",
+					config.KeyPrimaryKey: "ID",
 				},
 			},
 			wantErr: true,
@@ -67,7 +67,7 @@ func TestDestination_Configure(t *testing.T) {
 			args: args{
 				cfg: map[string]string{
 					config.KeyConnection: "HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=pwd",
-					config.KeyPrimaryKey: "id",
+					config.KeyPrimaryKey: "ID",
 				},
 			},
 			wantErr: true,
@@ -77,7 +77,7 @@ func TestDestination_Configure(t *testing.T) {
 			args: args{
 				cfg: map[string]string{
 					config.KeyConnection: "HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=pwd",
-					config.KeyTable:      "clients",
+					config.KeyTable:      "CLIENTS",
 				},
 			},
 			wantErr: true,
@@ -115,10 +115,10 @@ func TestDestination_Write(t *testing.T) {
 				"action": "insert",
 			},
 			Key: sdk.StructuredData{
-				"id": 1,
+				"ID": 1,
 			},
 			Payload: sdk.StructuredData{
-				"id":   1,
+				"ID":   1,
 				"name": "test",
 			},
 		}
@@ -148,7 +148,7 @@ func TestDestination_Write(t *testing.T) {
 				"action": "insert",
 			},
 			Key: sdk.StructuredData{
-				"id": 1,
+				"ID": 1,
 			},
 		}
 

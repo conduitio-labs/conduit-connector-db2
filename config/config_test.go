@@ -36,14 +36,14 @@ func TestParse(t *testing.T) {
 			args: args{
 				cfg: map[string]string{
 					KeyConnection: "HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=pwd",
-					KeyTable:      "clients",
-					KeyPrimaryKey: "id",
+					KeyTable:      "CLIENTS",
+					KeyPrimaryKey: "ID",
 				},
 			},
 			want: Config{
 				Connection: "HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=pwd",
-				Table:      "clients",
-				Key:        "id",
+				Table:      "CLIENTS",
+				Key:        "ID",
 			},
 			wantErr: false,
 		},
@@ -52,8 +52,8 @@ func TestParse(t *testing.T) {
 			args: args{
 				cfg: map[string]string{
 					KeyConnection: "",
-					KeyTable:      "clients",
-					KeyPrimaryKey: "id",
+					KeyTable:      "CLIENTS",
+					KeyPrimaryKey: "ID",
 				},
 			},
 			want:    Config{},
@@ -65,7 +65,7 @@ func TestParse(t *testing.T) {
 				cfg: map[string]string{
 					KeyConnection: "HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=pwd",
 					KeyTable:      "",
-					KeyPrimaryKey: "id",
+					KeyPrimaryKey: "ID",
 				},
 			},
 			want:    Config{},
@@ -76,7 +76,7 @@ func TestParse(t *testing.T) {
 			args: args{
 				cfg: map[string]string{
 					KeyConnection: "HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=pwd",
-					KeyTable:      "clients",
+					KeyTable:      "CLIENTS",
 					KeyPrimaryKey: "",
 				},
 			},
@@ -90,7 +90,7 @@ func TestParse(t *testing.T) {
 					KeyConnection: "HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=pwd",
 					KeyTable: "gigiurhhjjejbjhhiuiuyiuyuiyiuhkjkjmhkjhjjvnbvghcgftfiuhpobjhbvbnvbnvhgfgkjjkhjkbhjv" +
 						"hghgfghfhgcbvjhguiyuikhjbmbvhvghftyfyrdryyyrryhhncfgfhfjfgjfgj",
-					KeyPrimaryKey: "id",
+					KeyPrimaryKey: "ID",
 				},
 			},
 			want:    Config{},

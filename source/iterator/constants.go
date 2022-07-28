@@ -12,17 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package db2
+package iterator
 
-import (
-	sdk "github.com/conduitio/conduit-connector-sdk"
+type actionType string
 
-	"github.com/conduitio-labs/conduit-connector-db2/destination"
-	"github.com/conduitio-labs/conduit-connector-db2/source"
+const (
+	// metadata related.
+	metadataTable  = "table"
+	metadataAction = "action"
+
+	// actionType names.
+	actionInsert actionType = "insertValue"
 )
-
-var Connector = sdk.Connector{
-	NewSpecification: Specification,
-	NewSource:        source.New,
-	NewDestination:   destination.New,
-}

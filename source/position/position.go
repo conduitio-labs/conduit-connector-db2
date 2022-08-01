@@ -35,13 +35,13 @@ type Position struct {
 	// IteratorType - shows in what iterator was created position.
 	IteratorType IteratorType
 
-	// Snapshot info.
-	// LastProcessedVal - last processed value from ordering column.
-	LastProcessedVal any
+	// Snapshot information.
+	// SnapshotLastProcessedVal - last processed value from ordering column.
+	SnapshotLastProcessedVal any
 
 	// CDC information.
-	// RowNumber - the number of row.
-	CDCID int
+	// CDCID - last processed id from tracking table.
+	CDCLastID int64
 
 	// Time Created time.
 	Time time.Time

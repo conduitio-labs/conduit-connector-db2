@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	sdk "github.com/conduitio/conduit-connector-sdk"
@@ -28,20 +29,20 @@ import (
 	"github.com/conduitio-labs/conduit-connector-db2/source/position"
 )
 
-// SnapshotIterator - snapshot iterator.
-type SnapshotIterator struct {
+// CDCIterator - cdc iterator.
+type CDCIterator struct {
 	db   *sqlx.DB
 	rows *sqlx.Rows
 
 	// table - table name.
 	table string
+	// trackingTable - tracking table name.
+	trackingTable string
 	// columns list of table columns for record payload
 	// if empty - will get all columns.
 	columns []string
 	// key Name of column what iterator use for setting key in record.
 	key string
-	// orderingColumn Name of column what iterator use for sorting data.
-	orderingColumn string
 	// batchSize size of batch.
 	batchSize int
 	// position last recorded position.
@@ -50,38 +51,44 @@ type SnapshotIterator struct {
 	columnTypes map[string]string
 }
 
-func NewSnapshotIterator(
+// NewCDCIterator create new cdc iterator.
+func NewCDCIterator(
 	ctx context.Context,
 	db *sqlx.DB,
-	table, orderingColumn, key string,
+	table string, trackingTable, key string,
 	columns []string,
 	batchSize int,
 	position *position.Position,
-	columnTypes map[string]string,
-) (*SnapshotIterator, error) {
-	var err error
+) (*CDCIterator, error) {
+	var (
+		err error
+	)
 
-	snapshotIterator := &SnapshotIterator{
-		db:             db,
-		table:          table,
-		columns:        columns,
-		key:            key,
-		orderingColumn: orderingColumn,
-		batchSize:      batchSize,
-		position:       position,
-		columnTypes:    columnTypes,
+	cdcIterator := &CDCIterator{
+		db:            db,
+		table:         table,
+		trackingTable: trackingTable,
+		columns:       columns,
+		key:           key,
+		batchSize:     batchSize,
+		position:      position,
 	}
 
-	err = snapshotIterator.loadRows(ctx)
-	if err != nil {
+	if er := cdcIterator.loadRows(ctx); er != nil {
 		return nil, fmt.Errorf("load rows: %w", err)
 	}
 
-	return snapshotIterator, nil
+	// get column types for converting.
+	cdcIterator.columnTypes, err = coltypes.GetColumnTypes(ctx, db, trackingTable)
+	if err != nil {
+		return nil, fmt.Errorf("get table column types: %w", err)
+	}
+
+	return cdcIterator, nil
 }
 
 // HasNext check ability to get next record.
-func (i *SnapshotIterator) HasNext(ctx context.Context) (bool, error) {
+func (i *CDCIterator) HasNext(ctx context.Context) (bool, error) {
 	if i.rows != nil && i.rows.Next() {
 		return true, nil
 	}
@@ -94,7 +101,7 @@ func (i *SnapshotIterator) HasNext(ctx context.Context) (bool, error) {
 }
 
 // Next get new record.
-func (i *SnapshotIterator) Next(ctx context.Context) (sdk.Record, error) {
+func (i *CDCIterator) Next(ctx context.Context) (sdk.Record, error) {
 	row := make(map[string]any)
 	if err := i.rows.MapScan(row); err != nil {
 		return sdk.Record{}, fmt.Errorf("scan rows: %w", err)
@@ -105,14 +112,20 @@ func (i *SnapshotIterator) Next(ctx context.Context) (sdk.Record, error) {
 		return sdk.Record{}, fmt.Errorf("transform row column types: %w", err)
 	}
 
-	if _, ok := transformedRow[i.orderingColumn]; !ok {
-		return sdk.Record{}, ErrOrderingColumnIsNotExist
+	id, ok := transformedRow[columnTrackingID].(int64)
+	if !ok {
+		return sdk.Record{}, ErrWrongTrackingIDType
+	}
+
+	operationType, ok := transformedRow[columnOperationType].(string)
+	if !ok {
+		return sdk.Record{}, ErrWrongTrackingIDType
 	}
 
 	pos := position.Position{
-		IteratorType:             position.TypeSnapshot,
-		SnapshotLastProcessedVal: transformedRow[i.orderingColumn],
-		Time:                     time.Now(),
+		IteratorType: position.TypeCDC,
+		CDCLastID:    id,
+		Time:         time.Now(),
 	}
 
 	convertedPosition, err := pos.ConvertToSDKPosition()
@@ -120,9 +133,14 @@ func (i *SnapshotIterator) Next(ctx context.Context) (sdk.Record, error) {
 		return sdk.Record{}, fmt.Errorf("convert position %w", err)
 	}
 
-	if _, ok := transformedRow[i.key]; !ok {
+	if _, ok = transformedRow[i.key]; !ok {
 		return sdk.Record{}, ErrKeyIsNotExist
 	}
+
+	// delete tracking columns
+	delete(transformedRow, columnOperationType)
+	delete(transformedRow, columnTrackingID)
+	delete(transformedRow, columnTimeCreated)
 
 	transformedRowBytes, err := json.Marshal(transformedRow)
 	if err != nil {
@@ -135,7 +153,7 @@ func (i *SnapshotIterator) Next(ctx context.Context) (sdk.Record, error) {
 		Position: convertedPosition,
 		Metadata: map[string]string{
 			metadataTable:  i.table,
-			metadataAction: string(actionInsert),
+			metadataAction: strings.ToLower(operationType),
 		},
 		CreatedAt: time.Now(),
 		Key: sdk.StructuredData{
@@ -146,7 +164,7 @@ func (i *SnapshotIterator) Next(ctx context.Context) (sdk.Record, error) {
 }
 
 // Stop shutdown iterator.
-func (i *SnapshotIterator) Stop() error {
+func (i *CDCIterator) Stop() error {
 	if i.rows != nil {
 		err := i.rows.Close()
 		if err != nil {
@@ -162,33 +180,34 @@ func (i *SnapshotIterator) Stop() error {
 }
 
 // Ack check if record with position was recorded.
-func (i *SnapshotIterator) Ack(ctx context.Context, rp sdk.Position) error {
+func (i *CDCIterator) Ack(ctx context.Context, rp sdk.Position) error {
 	sdk.Logger(ctx).Debug().Str("position", string(rp)).Msg("got ack")
 
 	return nil
 }
 
-// LoadRows selects a batch of rows from a database, based on the CombinedIterator's
+// LoadRows selects a batch of rows from a database, based on the
 // table, columns, orderingColumn, batchSize and the current position.
-func (i *SnapshotIterator) loadRows(ctx context.Context) error {
+func (i *CDCIterator) loadRows(ctx context.Context) error {
 	selectBuilder := sqlbuilder.NewSelectBuilder()
 
 	if len(i.columns) > 0 {
-		selectBuilder.Select(i.columns...)
+		selectBuilder.Select(append(i.columns,
+			[]string{columnTrackingID, columnOperationType, columnTimeCreated}...)...)
 	} else {
 		selectBuilder.Select("*")
 	}
 
-	selectBuilder.From(i.table)
+	selectBuilder.From(i.trackingTable)
 
 	if i.position != nil {
 		selectBuilder.Where(
-			selectBuilder.GreaterThan(i.orderingColumn, i.position.SnapshotLastProcessedVal),
+			selectBuilder.GreaterThan(columnTrackingID, i.position.CDCLastID),
 		)
 	}
 
 	q, args := selectBuilder.
-		OrderBy(i.orderingColumn).
+		OrderBy(columnTrackingID).
 		Limit(i.batchSize).
 		Build()
 

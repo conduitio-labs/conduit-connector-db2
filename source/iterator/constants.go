@@ -22,5 +22,5 @@ const (
 	metadataAction = "action"
 
 	// actionType names.
-	actionInsert actionType = "insertValue"
+	actionInsert actionType = "insert"
 )

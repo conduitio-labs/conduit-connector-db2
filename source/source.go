@@ -24,7 +24,6 @@ import (
 	_ "github.com/ibmdb/go_ibm_db" //nolint:revive,nolintlint
 
 	"github.com/conduitio-labs/conduit-connector-db2/source/iterator"
-	"github.com/conduitio-labs/conduit-connector-db2/source/position"
 )
 
 // Source connector.
@@ -59,15 +58,10 @@ func (s *Source) Open(ctx context.Context, rp sdk.Position) error {
 		return err
 	}
 
-	pos, err := position.ParseSDKPosition(rp)
+	s.iterator, err = iterator.NewCombinedIterator(ctx, db, s.config.Table, s.config.Key, s.config.OrderingColumn,
+		s.config.Columns, s.config.BatchSize, rp)
 	if err != nil {
-		return fmt.Errorf("parse position: %w", err)
-	}
-
-	s.iterator, err = iterator.NewSnapshotIterator(ctx, db, s.config.Table, s.config.OrderingColumn, s.config.Key,
-		s.config.Columns, s.config.BatchSize, pos)
-	if err != nil {
-		return fmt.Errorf("new snapshot iterator %w", err)
+		return fmt.Errorf("new iterator: %w", err)
 	}
 
 	return nil

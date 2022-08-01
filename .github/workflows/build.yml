@@ -16,6 +16,22 @@ jobs:
         with:
           go-version: 1.18
 
+      - name: Install driver
+        run: |
+          sudo su
+          apt-get install -y gcc git go wget tar xz make gcc-c++
+          cd /root
+          curl -OL https://golang.org/dl/go1.17.X.linux-amd64.tar.gz
+          tar -C /usr/local -xzf go1.17.X.linux-amd64.tar.gz
+          
+          rm /usr/bin/go
+          rm /usr/bin/gofmt
+          cp /usr/local/go/bin/go /usr/bin/
+          cp /usr/local/go/bin/gofmt /usr/bin/
+          
+          go install github.com/ibmdb/go_ibm_db/installer@v0.4.1
+          
+
       - name: Test
         env:
           conn: ${{ secrets.DB2_CONNECTION }}

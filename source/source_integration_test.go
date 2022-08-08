@@ -56,6 +56,21 @@ const (
 		( 4, 'varchar', 'c', 'clob', 'long varchar', 'graphic', 'long vargraphic', 
 		 'vargraphic', 5455, 2321, 123.12, 123.1223)
 `
+	queryInsertCDCData = `
+		INSERT INTO CONDUIT_SOURCE_INTEGRATION_TABLE VALUES 
+		( 1, 'varchar', 'c', 'clob', 'long varchar', 'graphic', 'long vargraphic',
+		 'vargraphic', 5455, 2321, 123.12, 123.1223)
+	`
+
+	queryUpdateCDCData = `
+		UPDATE CONDUIT_SOURCE_INTEGRATION_TABLE SET CL1 ='update' 
+		WHERE ID = 1
+	`
+
+	queryDeleteCDCData = `
+		DELETE FROM CONDUIT_SOURCE_INTEGRATION_TABLE
+	`
+
 	queryDropTable         = `DROP TABLE CONDUIT_SOURCE_INTEGRATION_TABLE`
 	queryDropTrackingTable = `DROP TABLE CONDUIT_TRACKING_CONDUIT_SOURCE_INTEGRATION_TABLE`
 )
@@ -216,6 +231,81 @@ func TestSource_Snapshot_Empty_Table(t *testing.T) {
 	}
 }
 
+func TestSource_CDC(t *testing.T) {
+	cfg, err := prepareConfig()
+	if err != nil {
+		t.Skip()
+	}
+
+	ctx := context.Background()
+
+	err = prepareEmptyTable(ctx, cfg[config.KeyConnection])
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer clearData(ctx, cfg[config.KeyConnection]) // nolint:errcheck,nolintlint
+
+	s := new(Source)
+
+	err = s.Configure(ctx, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = s.Open(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Check read from empty table.
+	_, err = s.Read(ctx)
+	if err != sdk.ErrBackoffRetry {
+		t.Fatal(err)
+	}
+
+	// load data for cdc.
+	err = prepareCDCData(ctx, cfg[config.KeyConnection])
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Check insert.
+	r, err := s.Read(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if r.Metadata["action"] != "insert" {
+		t.Fatal(errors.New("wrong action"))
+	}
+
+	// Check cdc update.
+	r, err = s.Read(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if r.Metadata["action"] != "update" {
+		t.Fatal(errors.New("wrong action"))
+	}
+
+	// Check cdc delete.
+	r, err = s.Read(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if r.Metadata["action"] != "delete" {
+		t.Fatal(errors.New("wrong action"))
+	}
+
+	err = s.Teardown(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func prepareConfig() (map[string]string, error) {
 	connection := os.Getenv("DB2_CONNECTION")
 
@@ -297,6 +387,37 @@ func prepareEmptyTable(ctx context.Context, conn string) error {
 	}
 
 	_, err = db.Exec(queryCreateTable)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func prepareCDCData(ctx context.Context, conn string) error {
+	db, err := sql.Open("go_ibm_db", conn)
+	if err != nil {
+		return err
+	}
+
+	defer db.Close()
+
+	err = db.PingContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec(queryInsertCDCData)
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec(queryUpdateCDCData)
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec(queryDeleteCDCData)
 	if err != nil {
 		return err
 	}

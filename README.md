@@ -7,7 +7,7 @@ The [DB2](https://www.ibm.com/db2) connector is one of [Conduit](https://github.
 ### Prerequisites
 
 - [Go](https://go.dev/) 1.18
-- (optional) [golangci-lint](https://github.com/golangci/golangci-lint) 1.45.2
+- (optional) [golangci-lint](https://github.com/golangci/golangci-lint) 1.48.0
 - (optional) [mock](https://github.com/golang/mock) 1.6.0
 
 Connector uses go_ibm_db[go_ibm_db](https://github.com/ibmdb/go_ibm_db) library. This library required to install clidriver

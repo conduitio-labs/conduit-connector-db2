@@ -129,7 +129,7 @@ func (c *CombinedIterator) SetupCDC(ctx context.Context, db *sqlx.DB) error {
 	// check if table exist.
 	rows, err := tx.QueryContext(ctx, fmt.Sprintf(queryIfExistTable, c.trackingTable))
 
-	defer rows.Close()
+	defer rows.Close() //nolint:staticcheck,nolintlint
 
 	for rows.Next() {
 		var count int

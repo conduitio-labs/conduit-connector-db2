@@ -74,7 +74,7 @@ func NewCDCIterator(
 		position:      position,
 	}
 
-	if er := cdcIterator.loadRows(ctx); er != nil {
+	if err = cdcIterator.loadRows(ctx); err != nil {
 		return nil, fmt.Errorf("load rows: %w", err)
 	}
 

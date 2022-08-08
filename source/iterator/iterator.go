@@ -36,10 +36,11 @@ const (
 
 // CombinedIterator combined iterator.
 type CombinedIterator struct {
-	db *sqlx.DB
-
 	cdc      *CDCIterator
 	snapshot *SnapshotIterator
+
+	// connection string.
+	conn string
 
 	// table - table name.
 	table string
@@ -62,7 +63,7 @@ type CombinedIterator struct {
 func NewCombinedIterator(
 	ctx context.Context,
 	db *sqlx.DB,
-	table, key, orderingColumn string,
+	conn, table, key, orderingColumn string,
 	columns []string,
 	batchSize int,
 	sdkPosition sdk.Position,
@@ -70,7 +71,7 @@ func NewCombinedIterator(
 	var err error
 
 	it := &CombinedIterator{
-		db:             db,
+		conn:           conn,
 		table:          table,
 		columns:        columns,
 		key:            key,
@@ -88,7 +89,7 @@ func NewCombinedIterator(
 	// first time start.
 	if sdkPosition == nil {
 		// create tracking table, create triggers for cdc logic.
-		err = it.SetupCDC(ctx)
+		err = it.SetupCDC(ctx, db)
 		if err != nil {
 			return nil, fmt.Errorf("setup cdc: %w", err)
 		}
@@ -117,8 +118,8 @@ func NewCombinedIterator(
 }
 
 // SetupCDC - create tracking table, add columns, add triggers, set identity column.
-func (c *CombinedIterator) SetupCDC(ctx context.Context) error {
-	tx, err := c.db.Begin()
+func (c *CombinedIterator) SetupCDC(ctx context.Context, db *sqlx.DB) error {
+	tx, err := db.Begin()
 	if err != nil {
 		return fmt.Errorf("create transaction: %w", err)
 	}
@@ -128,7 +129,7 @@ func (c *CombinedIterator) SetupCDC(ctx context.Context) error {
 	// check if table exist.
 	rows, err := tx.QueryContext(ctx, fmt.Sprintf(queryIfExistTable, c.trackingTable))
 
-	defer rows.Close()
+	defer rows.Close() //nolint:staticcheck,nolintlint
 
 	for rows.Next() {
 		var count int
@@ -280,13 +281,23 @@ func (c *CombinedIterator) Ack(ctx context.Context, rp sdk.Position) error {
 func (c *CombinedIterator) switchToCDCIterator(ctx context.Context) error {
 	var err error
 
-	c.cdc, err = NewCDCIterator(ctx, c.db, c.table, c.trackingTable, c.key,
+	err = c.snapshot.Stop()
+	if err != nil {
+		return fmt.Errorf("stop snaphot iterator: %w", err)
+	}
+
+	c.snapshot = nil
+
+	db, err := sqlx.Open("go_ibm_db", c.conn)
+	if err != nil {
+		return err
+	}
+
+	c.cdc, err = NewCDCIterator(ctx, db, c.table, c.trackingTable, c.key,
 		c.columns, c.batchSize, nil)
 	if err != nil {
 		return fmt.Errorf("new shapshot iterator: %w", err)
 	}
-
-	c.snapshot = nil
 
 	return nil
 }

@@ -58,8 +58,8 @@ func (s *Source) Open(ctx context.Context, rp sdk.Position) error {
 		return err
 	}
 
-	s.iterator, err = iterator.NewCombinedIterator(ctx, db, s.config.Table, s.config.Key, s.config.OrderingColumn,
-		s.config.Columns, s.config.BatchSize, rp)
+	s.iterator, err = iterator.NewCombinedIterator(ctx, db, s.config.Connection,
+		s.config.Table, s.config.Key, s.config.OrderingColumn, s.config.Columns, s.config.BatchSize, rp)
 	if err != nil {
 		return fmt.Errorf("new iterator: %w", err)
 	}

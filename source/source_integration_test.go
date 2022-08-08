@@ -42,22 +42,22 @@ const (
 		cl8 BIGINT,
 		cl9 SMALLINT,
 		cl10 DECIMAL,
-		cl11 FLOAT,
-		cl12 DATE
+		cl11 FLOAT
 )
 	`
 	queryInsertTestData = `
 		INSERT INTO CONDUIT_SOURCE_INTEGRATION_TABLE VALUES 
 		( 1, 'varchar', 'c', 'clob', 'long varchar', 'graphic', 'long vargraphic',
-		 'vargraphic', 5455, 2321, 123.12, 123.1223, CURRENT DATE),
+		 'vargraphic', 5455, 2321, 123.12, 123.1223),
 		( 2, 'varchar', 'c', 'clob', 'long varchar', 'graphic', 'long vargraphic', 
-		 'vargraphic', 5455, 2321, 123.12, 123.1223, CURRENT DATE),
+		 'vargraphic', 5455, 2321, 123.12, 123.1223),
 		( 3, 'varchar', 'c', 'clob', 'long varchar', 'graphic', 'long vargraphic',
-		 'vargraphic', 5455, 2321, 123.12, 123.1223, CURRENT DATE),
+		 'vargraphic', 5455, 2321, 123.12, 123.1223),
 		( 4, 'varchar', 'c', 'clob', 'long varchar', 'graphic', 'long vargraphic', 
-		 'vargraphic', 5455, 2321, 123.12, 123.1223, CURRENT DATE)
+		 'vargraphic', 5455, 2321, 123.12, 123.1223)
 `
-	queryDropTable = `DROP TABLE CONDUIT_SOURCE_INTEGRATION_TABLE`
+	queryDropTable         = `DROP TABLE CONDUIT_SOURCE_INTEGRATION_TABLE`
+	queryDropTrackingTable = `DROP TABLE CONDUIT_TRACKING_CONDUIT_SOURCE_INTEGRATION_TABLE`
 )
 
 func TestSource_Snapshot_Success(t *testing.T) {
@@ -95,7 +95,7 @@ func TestSource_Snapshot_Success(t *testing.T) {
 	}
 
 	// check right converting.
-	exceptedRecordPayload := sdk.RawData(`{"CL1":"varchar","CL10":"123","CL11":123.1223,"CL12":"2022-07-27T00:00:00+03:00","CL2":"c","CL3":"clob","CL4":"long varchar","CL5":"graphic","CL6":"long vargraphic","CL7":"vargraphic","CL8":5455,"CL9":2321,"ID":1}`) // nolint:lll // for comparing
+	exceptedRecordPayload := sdk.RawData(`{"CL1":"varchar","CL10":"123","CL11":123.1223,"CL2":"c","CL3":"clob","CL4":"long varchar","CL5":"graphic","CL6":"long vargraphic","CL7":"vargraphic","CL8":5455,"CL9":2321,"ID":1}`) // nolint:lll // for comparing
 
 	if !reflect.DeepEqual(r.Payload, exceptedRecordPayload) {
 		t.Fatal(errors.New("wrong record payload"))
@@ -271,6 +271,11 @@ func clearData(ctx context.Context, conn string) error {
 	}
 
 	_, err = db.Exec(queryDropTable)
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec(queryDropTrackingTable)
 	if err != nil {
 		return err
 	}

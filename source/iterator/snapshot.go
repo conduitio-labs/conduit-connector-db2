@@ -40,7 +40,7 @@ type SnapshotIterator struct {
 	columns []string
 	// key Name of column what iterator use for setting key in record.
 	key string
-	// orderingColumn Name of column what iterator use for sorting data.
+	// orderingColumn Name of column what iterator using for sorting data.
 	orderingColumn string
 	// batchSize size of batch.
 	batchSize int

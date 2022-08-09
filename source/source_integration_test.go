@@ -306,6 +306,51 @@ func TestSource_CDC(t *testing.T) {
 	}
 }
 
+func TestSource_CDC_Empty_Table(t *testing.T) {
+	cfg, err := prepareConfig()
+	if err != nil {
+		t.Skip()
+	}
+
+	ctx := context.Background()
+
+	err = prepareEmptyTable(ctx, cfg[config.KeyConnection])
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer clearData(ctx, cfg[config.KeyConnection]) // nolint:errcheck,nolintlint
+
+	s := new(Source)
+
+	err = s.Configure(ctx, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = s.Open(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Check read from empty table.
+	_, err = s.Read(ctx)
+	if err != sdk.ErrBackoffRetry {
+		t.Fatal(err)
+	}
+
+	// CDC iterator read from empty table.
+	_, err = s.Read(ctx)
+	if err != sdk.ErrBackoffRetry {
+		t.Fatal(err)
+	}
+
+	err = s.Teardown(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func prepareConfig() (map[string]string, error) {
 	connection := os.Getenv("DB2_CONNECTION")
 

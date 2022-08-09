@@ -290,6 +290,17 @@ func TestSource_CDC(t *testing.T) {
 		t.Fatal(errors.New("wrong action"))
 	}
 
+	err = s.Teardown(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// start with previous position.
+	err = s.Open(ctx, r.Position)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	// Check cdc delete.
 	r, err = s.Read(ctx)
 	if err != nil {

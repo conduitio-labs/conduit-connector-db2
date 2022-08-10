@@ -42,7 +42,7 @@ type Config struct {
 	// OrderingColumn is a name of a column that the connector will use for ordering rows.
 	OrderingColumn string `key:"orderingColumn" validate:"required,max=128"`
 	// Columns  list of column names that should be included in each Record's payload.
-	Columns []string `key:"columns" validate:"dive,max=128"`
+	Columns []string `key:"columns" validate:"contains_or_default=Key OrderingColumn,dive,max=128"`
 	// BatchSize is a size of rows batch.
 	BatchSize int `key:"batchSize" validate:"gte=1,lte=100000"`
 }

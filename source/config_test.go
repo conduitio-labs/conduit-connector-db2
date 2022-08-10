@@ -116,6 +116,20 @@ func TestParse(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "failed, missed ordering column in custom columns",
+			args: args{
+				cfg: map[string]string{
+					config.KeyConnection: "HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=pwd",
+					config.KeyTable:      "CLIENTS",
+					config.KeyPrimaryKey: "ID",
+					KeyColumns:           "AGE,NAME",
+					KeyBatchSize:         "50",
+					KeyOrderingColumn:    "ID",
+				},
+			},
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {

@@ -41,7 +41,7 @@ type Position struct {
 
 	// CDC information.
 	// CDCID - last processed id from tracking table.
-	CDCLastID int64
+	CDCLastID int
 
 	// Time Created time.
 	Time time.Time

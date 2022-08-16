@@ -86,13 +86,10 @@ func NewCombinedIterator(
 		return nil, fmt.Errorf("get table column types: %w", err)
 	}
 
-	// first time start.
-	if sdkPosition == nil {
-		// create tracking table, create triggers for cdc logic.
-		err = it.SetupCDC(ctx, db)
-		if err != nil {
-			return nil, fmt.Errorf("setup cdc: %w", err)
-		}
+	// create tracking table, create triggers for cdc logic.
+	err = it.SetupCDC(ctx, db)
+	if err != nil {
+		return nil, fmt.Errorf("setup cdc: %w", err)
 	}
 
 	pos, err := position.ParseSDKPosition(sdkPosition)
@@ -128,6 +125,9 @@ func (c *CombinedIterator) SetupCDC(ctx context.Context, db *sqlx.DB) error {
 
 	// check if table exist.
 	rows, err := tx.QueryContext(ctx, fmt.Sprintf(queryIfExistTable, c.trackingTable))
+	if err != nil {
+		return fmt.Errorf("query exist table")
+	}
 
 	defer rows.Close() //nolint:staticcheck,nolintlint
 
@@ -266,16 +266,16 @@ func (c *CombinedIterator) Stop() error {
 
 // Ack check if record with position was recorded.
 func (c *CombinedIterator) Ack(ctx context.Context, rp sdk.Position) error {
-	switch {
-	case c.snapshot != nil:
-		return c.snapshot.Ack(ctx, rp)
-
-	case c.cdc != nil:
-		return c.cdc.Ack(ctx, rp)
-
-	default:
-		return ErrNoInitializedIterator
+	pos, err := position.ParseSDKPosition(rp)
+	if err != nil {
+		return fmt.Errorf("parse position: %w", err)
 	}
+
+	if pos.IteratorType == position.TypeCDC {
+		return c.cdc.Ack(ctx, pos)
+	}
+
+	return nil
 }
 
 func (c *CombinedIterator) switchToCDCIterator(ctx context.Context) error {

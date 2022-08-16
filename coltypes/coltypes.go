@@ -23,7 +23,7 @@ import (
 
 const (
 
-	// DB2 Types that can be represented as Go strings.
+	// DB2 Types.
 	charType           = "CHARACTER"
 	clobType           = "CLOB"
 	longVarcharType    = "LONG VARCHAR"
@@ -32,6 +32,7 @@ const (
 	longVarGraphicType = "LONG VARGRAPHIC"
 	varGraphicType     = "VARGRAPHIC"
 	decimalType        = "DECIMAL"
+	decimalFloat       = "DECFLOAT"
 )
 
 var (
@@ -64,7 +65,7 @@ func TransformRow(ctx context.Context, row map[string]any, columnTypes map[strin
 
 		switch columnTypes[key] {
 		case charType, clobType, longVarcharType, graphicType, longVarGraphicType,
-			varcharType, varGraphicType, decimalType:
+			varcharType, varGraphicType, decimalType, decimalFloat:
 			valueBytes, ok := value.([]byte)
 			if !ok {
 				return nil, convertValueToBytesErr(key)

@@ -227,17 +227,13 @@ func (i *CDCIterator) Stop() error {
 }
 
 // Ack check if record with position was recorded.
-func (i *CDCIterator) Ack(ctx context.Context, rp sdk.Position) error {
+func (i *CDCIterator) Ack(ctx context.Context, pos *position.Position) error {
 	if len(i.tableSrv.errCh) > 0 {
 		for v := range i.tableSrv.errCh {
 			return fmt.Errorf("clear tracking table: %w", v)
 		}
 	}
 
-	pos, err := position.ParseSDKPosition(rp)
-	if err != nil {
-		return fmt.Errorf("parse position: %w", err)
-	}
 	i.tableSrv.m.Lock()
 
 	if i.tableSrv.idsForRemoving == nil {

@@ -161,13 +161,6 @@ func (i *SnapshotIterator) Stop() error {
 	return nil
 }
 
-// Ack check if record with position was recorded.
-func (i *SnapshotIterator) Ack(ctx context.Context, rp sdk.Position) error {
-	sdk.Logger(ctx).Debug().Str("position", string(rp)).Msg("got ack")
-
-	return nil
-}
-
 // LoadRows selects a batch of rows from a database, based on the CombinedIterator's
 // table, columns, orderingColumn, batchSize and the current position.
 func (i *SnapshotIterator) loadRows(ctx context.Context) error {

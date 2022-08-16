@@ -19,6 +19,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"strings"
 
 	sdk "github.com/conduitio/conduit-connector-sdk"
@@ -155,6 +156,11 @@ func (w *Writer) upsert(ctx context.Context, record sdk.Record) error {
 
 	columns, values := w.extractColumnsAndValues(payload)
 
+	err = transformValues(values)
+	if err != nil {
+		return fmt.Errorf("transform values: %w", err)
+	}
+
 	query, err := w.buildUpsertQuery(tableName, keyColumn, columns, values)
 	if err != nil {
 		return fmt.Errorf("build upsert query: %w", err)
@@ -163,6 +169,24 @@ func (w *Writer) upsert(ctx context.Context, record sdk.Record) error {
 	_, err = w.db.ExecContext(ctx, query, values...)
 	if err != nil {
 		return fmt.Errorf("exec upsert: %w", err)
+	}
+
+	return nil
+}
+
+func transformValues(values []any) error {
+	for i := range values {
+		if values[i] != nil {
+			switch reflect.TypeOf(values[i]).Kind() {
+			case reflect.Map, reflect.Slice:
+				bs, err := json.Marshal(values[i])
+				if err != nil {
+					return fmt.Errorf("marshal: %w", err)
+				}
+
+				values[i] = string(bs)
+			}
+		}
 	}
 
 	return nil

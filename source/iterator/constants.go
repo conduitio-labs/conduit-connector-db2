@@ -23,4 +23,7 @@ const (
 
 	// actionType names.
 	actionInsert actionType = "insert"
+
+	waitingTimeoutSec            = 20
+	clearTrackingTableTimeoutSec = 5
 )

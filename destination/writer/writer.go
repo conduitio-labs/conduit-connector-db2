@@ -19,11 +19,12 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"reflect"
 	"strings"
 
 	sdk "github.com/conduitio/conduit-connector-sdk"
 	"github.com/huandu/go-sqlbuilder"
+
+	"github.com/conduitio-labs/conduit-connector-db2/coltypes"
 )
 
 const (
@@ -40,9 +41,10 @@ const (
 
 // Writer implements a writer logic for db2 destination.
 type Writer struct {
-	db        *sql.DB
-	table     string
-	keyColumn string
+	db          *sql.DB
+	table       string
+	keyColumn   string
+	columnTypes map[string]string
 }
 
 // Params is an incoming params for the NewWriter function.
@@ -53,12 +55,20 @@ type Params struct {
 }
 
 // NewWriter creates new instance of the Writer.
-func NewWriter(ctx context.Context, params Params) *Writer {
-	return &Writer{
+func NewWriter(ctx context.Context, params Params) (*Writer, error) {
+	writer := &Writer{
 		db:        params.DB,
 		table:     params.Table,
 		keyColumn: params.KeyColumn,
 	}
+
+	columnTypes, err := coltypes.GetColumnTypes(ctx, writer.db, writer.table)
+	if err != nil {
+		return nil, fmt.Errorf("get column types: %w", err)
+	}
+	writer.columnTypes = columnTypes
+
+	return writer, nil
 }
 
 // InsertRecord inserts a sdk.Record into a Destination.
@@ -132,6 +142,16 @@ func (w *Writer) upsert(ctx context.Context, record sdk.Record) error {
 		return fmt.Errorf("structurize payload: %w", err)
 	}
 
+	payload, err = coltypes.ConvertStructureData(ctx, w.columnTypes, payload)
+	if err != nil {
+		return fmt.Errorf("convert structure data: %w", err)
+	}
+
+	// if payload is empty return empty payload error
+	if payload == nil {
+		return ErrEmptyPayload
+	}
+
 	// if payload is empty return empty payload error
 	if payload == nil {
 		return ErrEmptyPayload
@@ -156,11 +176,6 @@ func (w *Writer) upsert(ctx context.Context, record sdk.Record) error {
 
 	columns, values := w.extractColumnsAndValues(payload)
 
-	err = transformValues(values)
-	if err != nil {
-		return fmt.Errorf("transform values: %w", err)
-	}
-
 	query, err := w.buildUpsertQuery(tableName, keyColumn, columns, values)
 	if err != nil {
 		return fmt.Errorf("build upsert query: %w", err)
@@ -169,24 +184,6 @@ func (w *Writer) upsert(ctx context.Context, record sdk.Record) error {
 	_, err = w.db.ExecContext(ctx, query, values...)
 	if err != nil {
 		return fmt.Errorf("exec upsert: %w", err)
-	}
-
-	return nil
-}
-
-func transformValues(values []any) error {
-	for i := range values {
-		if values[i] != nil {
-			switch reflect.TypeOf(values[i]).Kind() {
-			case reflect.Map, reflect.Slice:
-				bs, err := json.Marshal(values[i])
-				if err != nil {
-					return fmt.Errorf("marshal: %w", err)
-				}
-
-				values[i] = string(bs)
-			}
-		}
 	}
 
 	return nil

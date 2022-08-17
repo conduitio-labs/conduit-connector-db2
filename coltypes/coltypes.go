@@ -18,7 +18,12 @@ package coltypes
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
+	"reflect"
+	"time"
+
+	sdk "github.com/conduitio/conduit-connector-sdk"
 )
 
 const (
@@ -33,6 +38,10 @@ const (
 	varGraphicType     = "VARGRAPHIC"
 	decimalType        = "DECIMAL"
 	decimalFloat       = "DECFLOAT"
+
+	date      = "DATE"
+	timeType  = "TIME"
+	timeStamp = "TIMESTAMP"
 )
 
 var (
@@ -72,6 +81,53 @@ func TransformRow(ctx context.Context, row map[string]any, columnTypes map[strin
 			}
 
 			result[key] = string(valueBytes)
+
+		default:
+			result[key] = value
+		}
+	}
+
+	return result, nil
+}
+
+// ConvertStructureData converts a sdk.StructureData values to a proper database types.
+func ConvertStructureData(
+	ctx context.Context,
+	columnTypes map[string]string,
+	data sdk.StructuredData,
+) (sdk.StructuredData, error) {
+	result := make(sdk.StructuredData, len(data))
+
+	for key, value := range data {
+		if value == nil {
+			result[key] = value
+
+			continue
+		}
+
+		switch reflect.TypeOf(value).Kind() {
+		case reflect.Map, reflect.Slice:
+			bs, err := json.Marshal(value)
+			if err != nil {
+				return nil, fmt.Errorf("marshal: %w", err)
+			}
+
+			result[key] = string(bs)
+		}
+
+		switch columnTypes[key] {
+		case date, timeType, timeStamp:
+			valueStr, ok := value.(string)
+			if !ok {
+				return nil, ErrValueIsNotAString
+			}
+
+			timeValue, err := time.Parse(time.RFC3339, valueStr)
+			if err != nil {
+				return nil, fmt.Errorf("convert value to time.Time: %w", err)
+			}
+
+			result[key] = timeValue
 
 		default:
 			result[key] = value

@@ -20,10 +20,8 @@ import (
 )
 
 var (
-	// ErrCannotConvertValueToBytes occurs when a value cannot be converted into a byte slice.
 	ErrCannotConvertValueToBytes = errors.New("cannot convert value to byte slice")
-	// ErrCannotConvertValueToInt occurs when a value cannot be converted into an integer.
-	ErrCannotConvertValueToInt = errors.New("cannot convert value to int")
+	ErrValueIsNotAString         = errors.New("value is not a string")
 )
 
 // convertValueToBytesErr returns the formatted ErrCannotConvertValueToBytes error.

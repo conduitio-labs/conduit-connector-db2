@@ -63,11 +63,15 @@ func (d *Destination) Open(ctx context.Context) error {
 		return fmt.Errorf("ping db2: %w", err)
 	}
 
-	d.writer = writer.NewWriter(ctx, writer.Params{
+	d.writer, err = writer.NewWriter(ctx, writer.Params{
 		DB:        db,
 		Table:     d.config.Table,
 		KeyColumn: d.config.Key,
 	})
+
+	if err != nil {
+		return fmt.Errorf("new writer: %w", err)
+	}
 
 	return nil
 }

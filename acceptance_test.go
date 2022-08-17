@@ -25,7 +25,6 @@ import (
 
 	"github.com/brianvoe/gofakeit"
 	sdk "github.com/conduitio/conduit-connector-sdk"
-	"go.uber.org/goleak"
 
 	"github.com/conduitio-labs/conduit-connector-db2/config"
 	s "github.com/conduitio-labs/conduit-connector-db2/source"
@@ -77,9 +76,6 @@ func TestAcceptance(t *testing.T) {
 				SourceConfig:      cfg,
 				DestinationConfig: cfg,
 				BeforeTest:        beforeTest(t, cfg),
-				GoleakOptions: []goleak.Option{
-					goleak.IgnoreTopFunction("database/sql.(*DB).connectionOpener"),
-				},
 			},
 		},
 	})
@@ -126,8 +122,15 @@ func prepareData(t *testing.T, cfg map[string]string) error {
 		return err
 	}
 
+	db.Close()
+
 	// drop table
 	t.Cleanup(func() {
+		db, err = sql.Open("go_ibm_db", cfg[config.KeyConnection])
+		if err != nil {
+			t.Fatal(err)
+		}
+
 		queryDropTable := fmt.Sprintf(queryDropTestTable, cfg[config.KeyTable])
 
 		_, err = db.Exec(queryDropTable)

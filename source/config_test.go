@@ -85,8 +85,8 @@ func TestParse(t *testing.T) {
 				cfg: map[string]string{
 					config.KeyConnection: "HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=pwd",
 					config.KeyTable:      "CLIENTS",
-					config.KeyPrimaryKey: "ID",
-					KeyColumns:           "ID,NAME",
+					config.KeyPrimaryKey: "id",
+					KeyColumns:           "id,name",
 					KeyOrderingColumn:    "ID",
 					KeyBatchSize:         "50",
 				},

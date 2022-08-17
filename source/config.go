@@ -61,7 +61,7 @@ func Parse(cfg map[string]string) (Config, error) {
 	}
 
 	if columns := cfg[KeyColumns]; columns != "" {
-		sourceConfig.Columns = strings.Split(columns, ",")
+		sourceConfig.Columns = strings.Split(strings.ToUpper(strings.TrimSpace(columns)), ",")
 	}
 
 	if batchSize := cfg[KeyBatchSize]; batchSize != "" {

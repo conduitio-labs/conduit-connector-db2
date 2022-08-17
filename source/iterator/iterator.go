@@ -296,7 +296,7 @@ func (c *CombinedIterator) switchToCDCIterator(ctx context.Context) error {
 	c.cdc, err = NewCDCIterator(ctx, db, c.table, c.trackingTable, c.key,
 		c.columns, c.batchSize, nil)
 	if err != nil {
-		return fmt.Errorf("new shapshot iterator: %w", err)
+		return fmt.Errorf("new cdc iterator: %w", err)
 	}
 
 	return nil

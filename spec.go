@@ -34,52 +34,52 @@ func Specification() sdk.Specification {
 		Author:  "Meroxa, Inc.",
 		SourceParams: map[string]sdk.Parameter{
 			config.KeyConnection: {
-				Default:     "Connection string to DB2",
+				Description: "Connection string to DB2",
 				Required:    true,
-				Description: "",
+				Default:     "",
 			},
 			config.KeyTable: {
-				Default:     "A name of the table that the connector should write to.",
+				Description: "A name of the table that the connector should write to.",
 				Required:    true,
-				Description: "",
+				Default:     "",
 			},
 			config.KeyPrimaryKey: {
-				Default:     "A name of column that connector will use for create record key",
+				Description: "A name of column that connector will use for create record key",
 				Required:    true,
-				Description: "",
+				Default:     "",
 			},
 			source.KeyOrderingColumn: {
-				Default:     "",
-				Required:    true,
 				Description: "A name of a column that the connector will use for ordering rows.",
+				Required:    true,
+				Default:     "",
 			},
 			source.KeyColumns: {
-				Default:     "",
-				Required:    false,
 				Description: "The list of column names that should be included in each Record's payload",
+				Required:    false,
+				Default:     "",
 			},
 			source.KeyBatchSize: {
-				Default:     "1000",
-				Required:    false,
 				Description: "The size of rows batch",
+				Required:    false,
+				Default:     "1000",
 			},
 		},
 		DestinationParams: map[string]sdk.Parameter{
 			config.KeyConnection: {
-				Default:     "Connection string to DB2",
+				Description: "Connection string to DB2",
 				Required:    true,
-				Description: "",
+				Default:     "",
 			},
 			config.KeyTable: {
-				Default:     "A name of the table that the connector should write to.",
+				Description: "A name of the table that the connector should write to.",
 				Required:    true,
-				Description: "",
+				Default:     "",
 			},
 			config.KeyPrimaryKey: {
-				Default: "A column name that used to detect if the target table" +
+				Description: "A column name that used to detect if the target table" +
 					" already contains the record (destination).",
-				Required:    true,
-				Description: "",
+				Required: true,
+				Default:  "",
 			},
 		},
 	}

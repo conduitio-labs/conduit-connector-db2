@@ -90,6 +90,11 @@ func (i *SnapshotIterator) HasNext(ctx context.Context) (bool, error) {
 		return false, fmt.Errorf("load rows: %w", err)
 	}
 
+	// check new batch.
+	if i.rows != nil && i.rows.Next() {
+		return true, nil
+	}
+
 	return false, nil
 }
 

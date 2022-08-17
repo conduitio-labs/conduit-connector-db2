@@ -152,11 +152,6 @@ func (w *Writer) upsert(ctx context.Context, record sdk.Record) error {
 		return ErrEmptyPayload
 	}
 
-	// if payload is empty return empty payload error
-	if payload == nil {
-		return ErrEmptyPayload
-	}
-
 	key, err := w.structurizeData(record.Key)
 	if err != nil {
 		return fmt.Errorf("structurize key: %w", err)

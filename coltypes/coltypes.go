@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"strings"
 	"time"
 
 	sdk "github.com/conduitio/conduit-connector-sdk"
@@ -113,9 +114,11 @@ func ConvertStructureData(
 			}
 
 			result[key] = string(bs)
+
+			continue
 		}
 
-		switch columnTypes[key] {
+		switch columnTypes[strings.ToUpper(key)] {
 		case date, timeType, timeStamp:
 			valueStr, ok := value.(string)
 			if !ok {

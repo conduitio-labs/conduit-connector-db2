@@ -33,9 +33,9 @@ import (
 type trackingTableService struct {
 	m sync.Mutex
 
-	// chanel for getting stop signal.
+	// channel for getting stop signal.
 	stopCh chan bool
-	// chanel for errors.
+	// channel for errors.
 	errCh chan error
 	// chan for notify that all queries finished and db can be closed.
 	canCloseCh chan bool

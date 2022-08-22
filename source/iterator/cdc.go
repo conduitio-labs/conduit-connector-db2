@@ -253,6 +253,7 @@ func (i *CDCIterator) loadRows(ctx context.Context) error {
 	selectBuilder := sqlbuilder.NewSelectBuilder()
 
 	if len(i.columns) > 0 {
+		// append additional columns
 		selectBuilder.Select(append(i.columns,
 			[]string{columnTrackingID, columnOperationType, columnTimeCreated}...)...)
 	} else {

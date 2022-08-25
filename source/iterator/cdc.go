@@ -18,7 +18,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 	"sync"
 	"time"
 
@@ -182,20 +181,22 @@ func (i *CDCIterator) Next(ctx context.Context) (sdk.Record, error) {
 		return sdk.Record{}, fmt.Errorf("marshal row: %w", err)
 	}
 
-	i.position = &pos
+	metadata := sdk.Metadata(map[string]string{metadataTable: i.table})
+	metadata.SetCreatedAt(time.Now())
 
-	return sdk.Record{
-		Position: convertedPosition,
-		Metadata: map[string]string{
-			metadataTable:  i.table,
-			metadataAction: strings.ToLower(operationType),
-		},
-		CreatedAt: time.Now(),
-		Key: sdk.StructuredData{
-			i.key: transformedRow[i.key],
-		},
-		Payload: sdk.RawData(transformedRowBytes),
-	}, nil
+	switch actionType(operationType) {
+	case ActionInsert:
+		return sdk.Util.Source.NewRecordCreate(convertedPosition, metadata,
+			sdk.StructuredData{i.key: transformedRow[i.key]}, sdk.RawData(transformedRowBytes)), nil
+	case ActionUpdate:
+		return sdk.Util.Source.NewRecordUpdate(convertedPosition, metadata,
+			sdk.StructuredData{i.key: transformedRow[i.key]}, nil, sdk.RawData(transformedRowBytes)), nil
+	case ActionDelete:
+		return sdk.Util.Source.NewRecordDelete(convertedPosition, metadata,
+			sdk.StructuredData{i.key: transformedRow[i.key]}), nil
+	default:
+		return sdk.Record{}, ErrUnknownOperatorType
+	}
 }
 
 // Stop shutdown iterator.

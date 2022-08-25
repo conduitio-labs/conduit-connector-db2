@@ -23,6 +23,7 @@ import (
 
 	_ "github.com/ibmdb/go_ibm_db" //nolint:revive,nolintlint
 
+	"github.com/conduitio-labs/conduit-connector-db2/config"
 	"github.com/conduitio-labs/conduit-connector-db2/source/iterator"
 )
 
@@ -37,6 +38,42 @@ type Source struct {
 // New initialises a new source.
 func New() sdk.Source {
 	return &Source{}
+}
+
+// Parameters returns a map of named sdk.Parameters that describe how to configure the Source.
+func (s *Source) Parameters() map[string]sdk.Parameter {
+	return map[string]sdk.Parameter{
+		config.KeyConnection: {
+			Description: "Connection string to DB2",
+			Required:    true,
+			Default:     "",
+		},
+		config.KeyTable: {
+			Description: "A name of the table that the connector should write to.",
+			Required:    true,
+			Default:     "",
+		},
+		config.KeyPrimaryKey: {
+			Description: "A name of column that connector will use for create record key",
+			Required:    true,
+			Default:     "",
+		},
+		KeyOrderingColumn: {
+			Description: "A name of a column that the connector will use for ordering rows.",
+			Required:    true,
+			Default:     "",
+		},
+		KeyColumns: {
+			Description: "The list of column names that should be included in each Record's payload",
+			Required:    false,
+			Default:     "",
+		},
+		KeyBatchSize: {
+			Description: "The size of rows batch",
+			Required:    false,
+			Default:     "1000",
+		},
+	}
 }
 
 // Configure parses and stores configurations, returns an error in case of invalid configuration.

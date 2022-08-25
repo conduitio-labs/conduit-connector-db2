@@ -31,11 +31,10 @@ import (
 )
 
 const (
-	metadataAction = "action"
-	actionInsert   = "insert"
-
-	queryCreateTestTable = `CREATE TABLE %s (id int, name VARCHAR(100))`
-	queryDropTestTable   = `DROP TABLE %s`
+	queryCreateTestTable       = `CREATE TABLE %s (id int, name VARCHAR(100))`
+	queryDropTestTable         = `DROP TABLE %s`
+	queryDropTestTrackingTable = `DROP TABLE CONDUIT_TRACKING_%s`
+	queryIfExistTable          = `SELECT count(*) AS count FROM  SysCat.Tables WHERE TabName='CONDUIT_TRACKING_%s'`
 )
 
 type driver struct {
@@ -45,23 +44,24 @@ type driver struct {
 }
 
 // GenerateRecord generates a random sdk.Record.
-func (d *driver) GenerateRecord(t *testing.T) sdk.Record {
+func (d *driver) GenerateRecord(t *testing.T, operation sdk.Operation) sdk.Record {
 	atomic.AddInt32(&d.counter, 1)
 
 	return sdk.Record{
-		Position: nil,
+		Position:  nil,
+		Operation: operation,
 		Metadata: map[string]string{
-			metadataAction:  actionInsert,
 			config.KeyTable: d.Config.DestinationConfig[config.KeyTable],
 		},
 		Key: sdk.StructuredData{
 			"ID": d.counter,
 		},
-		Payload: sdk.RawData(
+		Payload: sdk.Change{After: sdk.RawData(
 			fmt.Sprintf(
 				`{"ID":%d,"NAME":"%s"}`, d.counter, gofakeit.Name(),
 			),
 		),
+		},
 	}
 }
 
@@ -136,6 +136,32 @@ func prepareData(t *testing.T, cfg map[string]string) error {
 		_, err = db.Exec(queryDropTable)
 		if err != nil {
 			t.Errorf("drop test table: %v", err)
+		}
+
+		queryDropTrackingTable := fmt.Sprintf(queryDropTestTrackingTable, cfg[config.KeyTable])
+
+		// check if table exist.
+		rows, er := db.Query(fmt.Sprintf(queryIfExistTable, cfg[config.KeyTable]))
+		if er != nil {
+			t.Error(er)
+		}
+
+		defer rows.Close() //nolint:staticcheck,nolintlint
+
+		for rows.Next() {
+			var count int
+			err = rows.Scan(&count)
+			if err != nil {
+				t.Error(er)
+			}
+
+			if count == 1 {
+				// table exist, setup not needed.
+				_, err = db.Exec(queryDropTrackingTable)
+				if err != nil {
+					t.Errorf("drop test tracking table: %v", err)
+				}
+			}
 		}
 
 		if err = db.Close(); err != nil {

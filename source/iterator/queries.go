@@ -92,13 +92,13 @@ func buildTriggers(trackingTable, table string, columnsTypes map[string]string, 
 
 	triggerTemplate = strings.ReplaceAll(triggerTemplate, placeholderTable, table)
 
-	queryTriggerInsert := strings.ReplaceAll(triggerTemplate, placeholderOperationType, "INSERT")
+	queryTriggerInsert := strings.ReplaceAll(triggerTemplate, placeholderOperationType, string(ActionInsert))
 	queryTriggerInsert = strings.ReplaceAll(queryTriggerInsert, placeholderRowType, "NEW")
 
-	queryTriggerUpdate := strings.ReplaceAll(triggerTemplate, placeholderOperationType, "UPDATE")
+	queryTriggerUpdate := strings.ReplaceAll(triggerTemplate, placeholderOperationType, string(ActionUpdate))
 	queryTriggerUpdate = strings.ReplaceAll(queryTriggerUpdate, placeholderRowType, "NEW")
 
-	queryTriggerDelete := strings.ReplaceAll(triggerTemplate, placeholderOperationType, "DELETE")
+	queryTriggerDelete := strings.ReplaceAll(triggerTemplate, placeholderOperationType, string(ActionDelete))
 	queryTriggerDelete = strings.ReplaceAll(queryTriggerDelete, placeholderRowType, "OLD")
 
 	return queryTriggers{

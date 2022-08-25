@@ -23,4 +23,5 @@ var (
 	ErrOrderingColumnIsNotExist = errors.New("ordering column is not exist")
 	ErrWrongTrackingIDType      = errors.New("tracking id wrong type")
 	ErrNoInitializedIterator    = errors.New("not initialized iterator")
+	ErrUnknownOperatorType      = errors.New("unknown iterator type")
 )

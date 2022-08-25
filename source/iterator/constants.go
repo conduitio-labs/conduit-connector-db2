@@ -18,11 +18,11 @@ type actionType string
 
 const (
 	// metadata related.
-	metadataTable  = "table"
-	metadataAction = "action"
+	metadataTable = "table"
 
-	// actionType names.
-	actionInsert actionType = "insert"
+	ActionInsert actionType = "INSERT"
+	ActionUpdate actionType = "UPDATE"
+	ActionDelete actionType = "DELETE"
 
 	waitingTimeoutSec            = 20
 	clearTrackingTableTimeoutSec = 5

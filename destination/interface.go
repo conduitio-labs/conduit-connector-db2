@@ -22,6 +22,7 @@ import (
 
 // Writer defines a writer interface needed for the Destination.
 type Writer interface {
-	InsertRecord(ctx context.Context, record sdk.Record) error
+	Delete(ctx context.Context, record sdk.Record) error
+	Upsert(ctx context.Context, record sdk.Record) error
 	Close(ctx context.Context) error
 }

@@ -16,9 +16,6 @@ package db2
 
 import (
 	sdk "github.com/conduitio/conduit-connector-sdk"
-
-	"github.com/conduitio-labs/conduit-connector-db2/config"
-	"github.com/conduitio-labs/conduit-connector-db2/source"
 )
 
 type Spec struct{}
@@ -32,55 +29,5 @@ func Specification() sdk.Specification {
 			"It provides both, a source and a destination DB2 connector.",
 		Version: "v0.1.0",
 		Author:  "Meroxa, Inc.",
-		SourceParams: map[string]sdk.Parameter{
-			config.KeyConnection: {
-				Description: "Connection string to DB2",
-				Required:    true,
-				Default:     "",
-			},
-			config.KeyTable: {
-				Description: "A name of the table that the connector should write to.",
-				Required:    true,
-				Default:     "",
-			},
-			config.KeyPrimaryKey: {
-				Description: "A name of column that connector will use for create record key",
-				Required:    true,
-				Default:     "",
-			},
-			source.KeyOrderingColumn: {
-				Description: "A name of a column that the connector will use for ordering rows.",
-				Required:    true,
-				Default:     "",
-			},
-			source.KeyColumns: {
-				Description: "The list of column names that should be included in each Record's payload",
-				Required:    false,
-				Default:     "",
-			},
-			source.KeyBatchSize: {
-				Description: "The size of rows batch",
-				Required:    false,
-				Default:     "1000",
-			},
-		},
-		DestinationParams: map[string]sdk.Parameter{
-			config.KeyConnection: {
-				Description: "Connection string to DB2",
-				Required:    true,
-				Default:     "",
-			},
-			config.KeyTable: {
-				Description: "A name of the table that the connector should write to.",
-				Required:    true,
-				Default:     "",
-			},
-			config.KeyPrimaryKey: {
-				Description: "A column name that used to detect if the target table" +
-					" already contains the record (destination).",
-				Required: true,
-				Default:  "",
-			},
-		},
 	}
 }

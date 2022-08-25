@@ -94,7 +94,7 @@ func NewCombinedIterator(
 
 	pos, err := position.ParseSDKPosition(sdkPosition)
 	if err != nil {
-		return nil, fmt.Errorf("parse position")
+		return nil, fmt.Errorf("parse position: %w", err)
 	}
 
 	if pos == nil || pos.IteratorType == position.TypeSnapshot {
@@ -126,7 +126,7 @@ func (c *CombinedIterator) SetupCDC(ctx context.Context, db *sqlx.DB) error {
 	// check if table exist.
 	rows, err := tx.QueryContext(ctx, fmt.Sprintf(queryIfExistTable, c.trackingTable))
 	if err != nil {
-		return fmt.Errorf("query exist table")
+		return fmt.Errorf("query exist table: %w", err)
 	}
 
 	defer rows.Close() //nolint:staticcheck,nolintlint

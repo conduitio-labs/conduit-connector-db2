@@ -115,11 +115,10 @@ func TestSource_Read(t *testing.T) {
 		})
 
 		record := sdk.Record{
-			Position:  pos,
-			Metadata:  nil,
-			CreatedAt: time.Time{},
-			Key:       st,
-			Payload:   st,
+			Position: pos,
+			Metadata: nil,
+			Key:      st,
+			Payload:  sdk.Change{After: st},
 		}
 
 		it := mock.NewMockIterator(ctrl)

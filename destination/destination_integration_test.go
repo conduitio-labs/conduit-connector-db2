@@ -57,130 +57,55 @@ func TestIntegrationDestination_Write_Success(t *testing.T) {
 		t.Error(err)
 	}
 
-	// check insert.
-	t.Run("insert", func(t *testing.T) {
-		err = dest.Open(ctx)
-		if err != nil {
-			t.Error(err)
-		}
+	err = dest.Open(ctx)
+	if err != nil {
+		t.Error(err)
+	}
 
-		err = dest.Write(ctx, sdk.Record{
-			Metadata: map[string]string{
-				"action": "insert",
-			},
-			Key: sdk.StructuredData{
-				"id": 1,
-			},
-			Payload: sdk.StructuredData{
-				"id": 1, "name": "test",
-			},
-		})
-		if err != nil {
-			t.Error(err)
-		}
-
-		err = dest.Teardown(ctx)
-		if err != nil {
-			t.Error(err)
-		}
-		if err != nil {
-			t.Error(err)
-		}
+	count, er := dest.Write(ctx, []sdk.Record{
+		{Payload: sdk.Change{After: sdk.StructuredData{
+			"id":   1,
+			"name": "test",
+		}},
+			Operation: sdk.OperationSnapshot,
+			Key:       sdk.StructuredData{"id": "1"},
+		},
+		{Payload: sdk.Change{After: sdk.StructuredData{
+			"id":   2,
+			"name": "test2",
+		}},
+			Operation: sdk.OperationCreate,
+			Key:       sdk.StructuredData{"id": "2"},
+		},
+		{Payload: sdk.Change{After: sdk.StructuredData{
+			"id":   3,
+			"name": "testUpdate",
+		}},
+			Operation: sdk.OperationUpdate,
+			Key:       sdk.StructuredData{"id": "2"},
+		},
+		{
+			Operation: sdk.OperationDelete,
+			Key:       sdk.StructuredData{"id": "1"},
+		},
 	},
 	)
 
-	// check update.
-	t.Run("update", func(t *testing.T) {
-		err = dest.Open(ctx)
-		if err != nil {
-			t.Error(err)
-		}
+	if er != nil {
+		t.Error(er)
+	}
 
-		err = dest.Write(ctx, sdk.Record{
-			Metadata: map[string]string{
-				"action": "update",
-			},
-			Key: sdk.StructuredData{
-				"id": 1,
-			},
-			Payload: sdk.StructuredData{
-				"id": 1, "name": "NewTest",
-			},
-		})
-		if err != nil {
-			t.Error(err)
-		}
+	if count != 4 {
+		t.Error(errors.New("count mismatch"))
+	}
 
-		err = dest.Teardown(ctx)
-		if err != nil {
-			t.Error(err)
-		}
-		if err != nil {
-			t.Error(err)
-		}
-	},
-	)
-
-	// check delete.
-	t.Run("delete", func(t *testing.T) {
-		err = dest.Open(ctx)
-		if err != nil {
-			t.Error(err)
-		}
-
-		err = dest.Write(ctx, sdk.Record{
-			Metadata: map[string]string{
-				"action": "delete",
-			},
-			Key: sdk.StructuredData{
-				"id": 1,
-			},
-			Payload: sdk.StructuredData{
-				"id": 1, "name": "NewTest",
-			},
-		})
-		if err != nil {
-			t.Error(err)
-		}
-
-		err = dest.Teardown(ctx)
-		if err != nil {
-			t.Error(err)
-		}
-		if err != nil {
-			t.Error(err)
-		}
-	},
-	)
-
-	// check insert.
-	t.Run("insert_without_metadata", func(t *testing.T) {
-		err = dest.Open(ctx)
-		if err != nil {
-			t.Error(err)
-		}
-
-		err = dest.Write(ctx, sdk.Record{
-			Key: sdk.StructuredData{
-				"id": 1,
-			},
-			Payload: sdk.StructuredData{
-				"id": 1, "name": "test",
-			},
-		})
-		if err != nil {
-			t.Error(err)
-		}
-
-		err = dest.Teardown(ctx)
-		if err != nil {
-			t.Error(err)
-		}
-		if err != nil {
-			t.Error(err)
-		}
-	},
-	)
+	err = dest.Teardown(ctx)
+	if err != nil {
+		t.Error(err)
+	}
+	if err != nil {
+		t.Error(err)
+	}
 }
 
 func prepareConfig() (map[string]string, error) {

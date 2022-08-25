@@ -136,18 +136,11 @@ func (i *SnapshotIterator) Next(ctx context.Context) (sdk.Record, error) {
 
 	i.position = &pos
 
-	return sdk.Record{
-		Position: convertedPosition,
-		Metadata: map[string]string{
-			metadataTable:  i.table,
-			metadataAction: string(actionInsert),
-		},
-		CreatedAt: time.Now(),
-		Key: sdk.StructuredData{
-			i.key: transformedRow[i.key],
-		},
-		Payload: sdk.RawData(transformedRowBytes),
-	}, nil
+	metadata := sdk.Metadata(map[string]string{metadataTable: i.table})
+	metadata.SetCreatedAt(time.Now())
+
+	return sdk.Util.Source.NewRecordSnapshot(convertedPosition, metadata,
+		sdk.StructuredData{i.key: transformedRow[i.key]}, sdk.RawData(transformedRowBytes)), nil
 }
 
 // Stop shutdown iterator.

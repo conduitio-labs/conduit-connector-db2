@@ -40,6 +40,28 @@ func New() sdk.Destination {
 	return &Destination{}
 }
 
+// Parameters returns a map of named sdk.Parameters that describe how to configure the Destination.
+func (d *Destination) Parameters() map[string]sdk.Parameter {
+	return map[string]sdk.Parameter{
+		config.KeyConnection: {
+			Description: "Connection string to DB2",
+			Required:    true,
+			Default:     "",
+		},
+		config.KeyTable: {
+			Description: "A name of the table that the connector should write to.",
+			Required:    true,
+			Default:     "",
+		},
+		config.KeyPrimaryKey: {
+			Description: "A column name that used to detect if the target table" +
+				" already contains the record (destination).",
+			Required: true,
+			Default:  "",
+		},
+	}
+}
+
 // Configure parses and initializes the config.
 func (d *Destination) Configure(ctx context.Context, cfg map[string]string) error {
 	configuration, err := config.Parse(cfg)
@@ -77,8 +99,20 @@ func (d *Destination) Open(ctx context.Context) error {
 }
 
 // Write writes a record into a Destination.
-func (d *Destination) Write(ctx context.Context, record sdk.Record) error {
-	return d.writer.InsertRecord(ctx, record)
+func (d *Destination) Write(ctx context.Context, records []sdk.Record) (int, error) {
+	for i, record := range records {
+		err := sdk.Util.Destination.Route(ctx, record,
+			d.writer.Upsert,
+			d.writer.Upsert,
+			d.writer.Delete,
+			d.writer.Upsert,
+		)
+		if err != nil {
+			return i, fmt.Errorf("route %s: %w", record.Operation.String(), err)
+		}
+	}
+
+	return len(records), nil
 }
 
 // Teardown gracefully closes connections.

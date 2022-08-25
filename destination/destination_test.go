@@ -110,28 +110,28 @@ func TestDestination_Write(t *testing.T) {
 		ctx := context.Background()
 
 		record := sdk.Record{
-			Position: sdk.Position("1.0"),
-			Metadata: map[string]string{
-				"action": "insert",
-			},
+			Operation: sdk.OperationCreate,
 			Key: sdk.StructuredData{
 				"ID": 1,
 			},
-			Payload: sdk.StructuredData{
+			Payload: sdk.Change{After: sdk.StructuredData{
 				"ID":   1,
 				"name": "test",
+			},
 			},
 		}
 
 		w := mock.NewMockWriter(ctrl)
-		w.EXPECT().InsertRecord(ctx, record).Return(nil)
+		w.EXPECT().Upsert(ctx, record).Return(nil)
 
 		d := Destination{
 			writer: w,
 		}
 
-		err := d.Write(ctx, record)
+		c, err := d.Write(ctx, []sdk.Record{record})
 		is.NoErr(err)
+
+		is.Equal(c, 1)
 	})
 
 	t.Run("fail, empty payload", func(t *testing.T) {
@@ -143,7 +143,8 @@ func TestDestination_Write(t *testing.T) {
 		ctx := context.Background()
 
 		record := sdk.Record{
-			Position: sdk.Position("1.0"),
+			Operation: sdk.OperationSnapshot,
+			Position:  sdk.Position("1.0"),
 			Metadata: map[string]string{
 				"action": "insert",
 			},
@@ -153,13 +154,13 @@ func TestDestination_Write(t *testing.T) {
 		}
 
 		w := mock.NewMockWriter(ctrl)
-		w.EXPECT().InsertRecord(ctx, record).Return(writer.ErrEmptyPayload)
+		w.EXPECT().Upsert(ctx, record).Return(writer.ErrEmptyPayload)
 
 		d := Destination{
 			writer: w,
 		}
 
-		err := d.Write(ctx, record)
+		_, err := d.Write(ctx, []sdk.Record{record})
 		is.Equal(err != nil, true)
 	})
 }

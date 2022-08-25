@@ -29,11 +29,7 @@ import (
 
 const (
 	// metadata related.
-	metadataTable  = "table"
-	metadataAction = "action"
-
-	// action names.
-	actionDelete = "delete"
+	metadataTable = "table"
 
 	// placeholder.
 	placeholder = "?"
@@ -71,25 +67,14 @@ func NewWriter(ctx context.Context, params Params) (*Writer, error) {
 	return writer, nil
 }
 
-// InsertRecord inserts a sdk.Record into a Destination.
-func (w *Writer) InsertRecord(ctx context.Context, record sdk.Record) error {
-	action := record.Metadata[metadataAction]
-
-	if action == actionDelete {
-		return w.delete(ctx, record)
-	}
-
-	return w.upsert(ctx, record)
-}
-
 // Close closes the underlying db connection.
 func (w *Writer) Close(ctx context.Context) error {
 	return w.db.Close()
 }
 
-// delete deletes records by a key. First it looks in the sdk.Record.Key,
+// Delete deletes records by a key. First it looks in the sdk.Record.Key,
 // if it doesn't find a key there it will use the default configured value for a key.
-func (w *Writer) delete(ctx context.Context, record sdk.Record) error {
+func (w *Writer) Delete(ctx context.Context, record sdk.Record) error {
 	tableName := w.getTableName(record.Metadata)
 
 	key, err := w.structurizeData(record.Key)
@@ -132,12 +117,12 @@ func (w *Writer) getTableName(metadata map[string]string) string {
 	return tableName
 }
 
-// upsert inserts or updates a record. If the record.Key is not empty the method
+// Upsert inserts or updates a record. If the record.Key is not empty the method
 // will try to update the existing row, otherwise, it will plainly append a new row.
-func (w *Writer) upsert(ctx context.Context, record sdk.Record) error {
+func (w *Writer) Upsert(ctx context.Context, record sdk.Record) error {
 	tableName := w.getTableName(record.Metadata)
 
-	payload, err := w.structurizeData(record.Payload)
+	payload, err := w.structurizeData(record.Payload.After)
 	if err != nil {
 		return fmt.Errorf("structurize payload: %w", err)
 	}

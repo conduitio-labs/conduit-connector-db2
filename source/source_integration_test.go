@@ -110,7 +110,9 @@ func TestSource_Snapshot_Success(t *testing.T) {
 	}
 
 	// check right converting.
-	exceptedRecordPayload := sdk.RawData(`{"CL1":"varchar","CL10":"123","CL11":123.1223,"CL2":"c","CL3":"clob","CL4":"long varchar","CL5":"graphic","CL6":"long vargraphic","CL7":"vargraphic","CL8":5455,"CL9":2321,"ID":1}`) //nolint:lll// for comparing
+	exceptedRecordPayload := sdk.Change{
+		After: sdk.RawData(`{"CL1":"varchar","CL10":"123","CL11":123.1223,"CL2":"c","CL3":"clob","CL4":"long varchar","CL5":"graphic","CL6":"long vargraphic","CL7":"vargraphic","CL8":5455,"CL9":2321,"ID":1}`), //nolint:lll// for comparing
+	}
 
 	if !reflect.DeepEqual(r.Payload, exceptedRecordPayload) {
 		t.Fatal(errors.New("wrong record payload"))
@@ -276,8 +278,8 @@ func TestSource_CDC(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if r.Metadata["action"] != "insert" {
-		t.Fatal(errors.New("wrong action"))
+	if r.Operation != sdk.OperationCreate {
+		t.Fatal(errors.New("wrong operation"))
 	}
 
 	// Check cdc update.
@@ -286,8 +288,8 @@ func TestSource_CDC(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if r.Metadata["action"] != "update" {
-		t.Fatal(errors.New("wrong action"))
+	if r.Operation != sdk.OperationUpdate {
+		t.Fatal(errors.New("wrong operation"))
 	}
 
 	err = s.Teardown(ctx)
@@ -307,8 +309,8 @@ func TestSource_CDC(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if r.Metadata["action"] != "delete" {
-		t.Fatal(errors.New("wrong action"))
+	if r.Operation != sdk.OperationDelete {
+		t.Fatal(errors.New("wrong operation"))
 	}
 
 	err = s.Teardown(ctx)

@@ -29,22 +29,23 @@ import (
 	"github.com/conduitio-labs/conduit-connector-db2/source/position"
 )
 
+// trackingTableService service for clearing tracking table.
 type trackingTableService struct {
 	m sync.Mutex
 
 	// chanel for getting stop signal.
-	stopCh chan bool
+	stopCh chan struct{}
 	// chanel for errors.
 	errCh chan error
 	// chan for notify that all queries finished and db can be closed.
-	canCloseCh chan bool
+	canCloseCh chan struct{}
 	// idsForRemoving - ids of rows what need to clear.
 	idsForRemoving []any
 }
 
 func newTrackingTableService() *trackingTableService {
-	stopCh := make(chan bool, 1)
-	canCloseCh := make(chan bool, 1)
+	stopCh := make(chan struct{}, 1)
+	canCloseCh := make(chan struct{}, 1)
 	errCh := make(chan error, 1)
 	trackingIDsForRemoving := make([]any, 0)
 
@@ -54,6 +55,12 @@ func newTrackingTableService() *trackingTableService {
 		idsForRemoving: trackingIDsForRemoving,
 		canCloseCh:     canCloseCh,
 	}
+}
+
+func (t *trackingTableService) close() {
+	close(t.canCloseCh)
+	close(t.errCh)
+	close(t.stopCh)
 }
 
 // CDCIterator - cdc iterator.
@@ -204,7 +211,7 @@ func (i *CDCIterator) Next(ctx context.Context) (sdk.Record, error) {
 // Stop shutdown iterator.
 func (i *CDCIterator) Stop() error {
 	// send signal for finish clear tracking table.
-	i.tableSrv.stopCh <- true
+	i.tableSrv.stopCh <- struct{}{}
 
 	if i.rows != nil {
 		err := i.rows.Close()
@@ -217,11 +224,15 @@ func (i *CDCIterator) Stop() error {
 	// wait until clearing tracking table will be finished.
 	case <-i.tableSrv.canCloseCh:
 		if i.db != nil {
+			i.tableSrv.close()
+
 			return i.db.Close()
 		}
 	// waiting timeout.
 	case <-time.After(waitingTimeoutSec * time.Second):
 		if i.db != nil {
+			i.tableSrv.close()
+
 			return i.db.Close()
 		}
 	}
@@ -333,8 +344,8 @@ func (i *CDCIterator) clearTrackingTable(ctx context.Context) {
 				i.tableSrv.errCh <- err
 			}
 
-			// query finished, db can be closed.
-			i.tableSrv.canCloseCh <- true
+			// clearing was finished, db can be closed.
+			i.tableSrv.canCloseCh <- struct{}{}
 
 			return
 

@@ -30,6 +30,8 @@ import (
 const (
 
 	// DB2 Types.
+
+	// String types.
 	charType           = "CHARACTER"
 	clobType           = "CLOB"
 	longVarcharType    = "LONG VARCHAR"
@@ -40,9 +42,14 @@ const (
 	decimalType        = "DECIMAL"
 	decimalFloat       = "DECFLOAT"
 
+	// Time types.
 	date      = "DATE"
 	timeType  = "TIME"
 	timeStamp = "TIMESTAMP"
+
+	// Binary types.
+	binary    = "BINARY"
+	varbinary = "VARBINARY"
 )
 
 var (
@@ -128,6 +135,13 @@ func ConvertStructureData(
 		// Converting value to time if it is string.
 		switch columnTypes[strings.ToUpper(key)] {
 		case date, timeType, timeStamp:
+			_, ok := value.(time.Time)
+			if ok {
+				result[key] = value
+
+				continue
+			}
+
 			valueStr, ok := value.(string)
 			if !ok {
 				return nil, ErrValueIsNotAString
@@ -139,6 +153,21 @@ func ConvertStructureData(
 			}
 
 			result[key] = timeValue
+
+		case binary, varbinary:
+			_, ok := value.([]byte)
+			if ok {
+				result[key] = value
+
+				continue
+			}
+
+			valueStr, ok := value.(string)
+			if !ok {
+				return nil, ErrValueIsNotAString
+			}
+
+			result[key] = []byte(valueStr)
 
 		default:
 			result[key] = value

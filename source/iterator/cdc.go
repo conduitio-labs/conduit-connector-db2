@@ -33,11 +33,11 @@ import (
 type trackingTableService struct {
 	m sync.Mutex
 
-	// chanel for getting stop signal.
+	// channel for getting stop signal.
 	stopCh chan struct{}
-	// chanel for errors.
+	// channel for errors.
 	errCh chan error
-	// chan for notify that all queries finished and db can be closed.
+	// channel for notify that all queries finished and db can be closed.
 	canCloseCh chan struct{}
 	// idsForRemoving - ids of rows what need to clear.
 	idsForRemoving []any
@@ -267,6 +267,7 @@ func (i *CDCIterator) loadRows(ctx context.Context) error {
 	selectBuilder := sqlbuilder.NewSelectBuilder()
 
 	if len(i.columns) > 0 {
+		// append additional columns
 		selectBuilder.Select(append(i.columns,
 			[]string{columnTrackingID, columnOperationType, columnTimeCreated}...)...)
 	} else {

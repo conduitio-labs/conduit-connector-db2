@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 
@@ -50,6 +51,7 @@ const (
 	// Binary types.
 	binary    = "BINARY"
 	varbinary = "VARBINARY"
+	blob      = "BLOB"
 )
 
 var (
@@ -153,8 +155,29 @@ func ConvertStructureData(
 			}
 
 			result[key] = timeValue
+		// DecimalFlot must be number.
+		case decimalFloat:
+			switch v := value.(type) {
+			case float64:
+				result[key] = v
+			case float32:
+				result[key] = v
+			case int64:
+				result[key] = value.(float64)
+			case int32:
+				result[key] = value.(float32)
+			case string:
+				res, err := strconv.ParseFloat(value.(string), 64)
+				if err != nil {
+					return nil, fmt.Errorf("parse float: %w", err)
+				}
 
-		case binary, varbinary:
+				result[key] = res
+			default:
+				return nil, ErrConvertDecFloat
+			}
+
+		case binary, varbinary, blob:
 			_, ok := value.([]byte)
 			if ok {
 				result[key] = value

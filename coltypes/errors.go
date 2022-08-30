@@ -23,6 +23,7 @@ var (
 	ErrCannotConvertValueToBytes = errors.New("cannot convert value to byte slice")
 	ErrValueIsNotAString         = errors.New("value is not a string")
 	ErrConvertDecFloat           = errors.New("cannot convert DECFLOAT")
+	ErrInvalidTimeLayout         = errors.New("invalid time layout")
 )
 
 // convertValueToBytesErr returns the formatted ErrCannotConvertValueToBytes error.

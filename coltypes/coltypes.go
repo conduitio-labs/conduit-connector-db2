@@ -31,6 +31,8 @@ import (
 const (
 
 	// DB2 Types.
+
+	// String types.
 	charType           = "CHARACTER"
 	clobType           = "CLOB"
 	longVarcharType    = "LONG VARCHAR"
@@ -41,9 +43,15 @@ const (
 	decimalType        = "DECIMAL"
 	decimalFloat       = "DECFLOAT"
 
+	// Time types.
 	date      = "DATE"
 	timeType  = "TIME"
 	timeStamp = "TIMESTAMP"
+
+	// Binary types.
+	binary    = "BINARY"
+	varbinary = "VARBINARY"
+	blob      = "BLOB"
 )
 
 var (
@@ -56,6 +64,10 @@ var (
 			from syscat.columns
 			where tabname = '%s'
 `
+	// time layouts.
+	layouts = []string{time.RFC3339, time.RFC3339Nano, time.Layout, time.ANSIC, time.UnixDate, time.RubyDate,
+		time.RFC822, time.RFC822Z, time.RFC850, time.RFC1123, time.RFC1123Z, time.RFC3339, time.RFC3339,
+		time.RFC3339Nano, time.Kitchen, time.Stamp, time.StampMilli, time.StampMicro, time.StampNano}
 )
 
 // Querier is a database querier interface needed for the GetColumnTypes function.
@@ -75,6 +87,7 @@ func TransformRow(ctx context.Context, row map[string]any, columnTypes map[strin
 		}
 
 		switch columnTypes[key] {
+		// Convert to string.
 		case charType, clobType, longVarcharType, graphicType, longVarGraphicType,
 			varcharType, varGraphicType, decimalType, decimalFloat:
 			valueBytes, ok := value.([]byte)
@@ -107,8 +120,8 @@ func ConvertStructureData(
 			continue
 		}
 
-		// DB2 doesn't have json or similar column types.
-		// For this case it is better use  some string type column.
+		// DB2 doesn't have json type or similar.
+		// DB2 string types can replace it.
 		switch reflect.TypeOf(value).Kind() {
 		case reflect.Map, reflect.Slice:
 			bs, err := json.Marshal(value)
@@ -121,15 +134,22 @@ func ConvertStructureData(
 			continue
 		}
 
+		// Converting value to time if it is string.
 		switch columnTypes[strings.ToUpper(key)] {
-		// Converting value to time.Time for date, time, timestamp DB2 columns.
 		case date, timeType, timeStamp:
+			_, ok := value.(time.Time)
+			if ok {
+				result[key] = value
+
+				continue
+			}
+
 			valueStr, ok := value.(string)
 			if !ok {
 				return nil, ErrValueIsNotAString
 			}
 
-			timeValue, err := time.Parse(time.RFC3339, valueStr)
+			timeValue, err := parseToTime(valueStr)
 			if err != nil {
 				return nil, fmt.Errorf("convert value to time.Time: %w", err)
 			}
@@ -137,13 +157,15 @@ func ConvertStructureData(
 			result[key] = timeValue
 		// DecimalFlot must be number.
 		case decimalFloat:
-			switch value.(type) {
+			switch v := value.(type) {
 			case float64:
-				result[key] = value
+				result[key] = v
 			case float32:
-				result[key] = value
+				result[key] = v
 			case int64:
 				result[key] = value.(float64)
+			case int32:
+				result[key] = value.(float32)
 			case string:
 				res, err := strconv.ParseFloat(value.(string), 64)
 				if err != nil {
@@ -154,6 +176,21 @@ func ConvertStructureData(
 			default:
 				return nil, ErrConvertDecFloat
 			}
+
+		case binary, varbinary, blob:
+			_, ok := value.([]byte)
+			if ok {
+				result[key] = value
+
+				continue
+			}
+
+			valueStr, ok := value.(string)
+			if !ok {
+				return nil, ErrValueIsNotAString
+			}
+
+			result[key] = []byte(valueStr)
 
 		default:
 			result[key] = value
@@ -181,4 +218,17 @@ func GetColumnTypes(ctx context.Context, querier Querier, tableName string) (map
 	}
 
 	return columnTypes, nil
+}
+
+func parseToTime(val string) (time.Time, error) {
+	for _, l := range layouts {
+		timeValue, err := time.Parse(l, val)
+		if err != nil {
+			continue
+		}
+
+		return timeValue, nil
+	}
+
+	return time.Time{}, fmt.Errorf("%s - %w", val, ErrInvalidTimeLayout)
 }

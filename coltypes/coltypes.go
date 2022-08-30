@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 
@@ -106,6 +107,8 @@ func ConvertStructureData(
 			continue
 		}
 
+		// DB2 doesn't have json or similar column types.
+		// For this case it is better use  some string type column.
 		switch reflect.TypeOf(value).Kind() {
 		case reflect.Map, reflect.Slice:
 			bs, err := json.Marshal(value)
@@ -119,6 +122,7 @@ func ConvertStructureData(
 		}
 
 		switch columnTypes[strings.ToUpper(key)] {
+		// Converting value to time.Time for date, time, timestamp DB2 columns.
 		case date, timeType, timeStamp:
 			valueStr, ok := value.(string)
 			if !ok {
@@ -131,6 +135,25 @@ func ConvertStructureData(
 			}
 
 			result[key] = timeValue
+		// DecimalFlot must be number.
+		case decimalFloat:
+			switch value.(type) {
+			case float64:
+				result[key] = value
+			case float32:
+				result[key] = value
+			case int64:
+				result[key] = value.(float64)
+			case string:
+				res, err := strconv.ParseFloat(value.(string), 64)
+				if err != nil {
+					return nil, fmt.Errorf("parse float: %w", err)
+				}
+
+				result[key] = res
+			default:
+				return nil, ErrConvertDecFloat
+			}
 
 		default:
 			result[key] = value

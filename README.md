@@ -2,7 +2,8 @@
 
 ## General
 
-The [DB2](https://www.ibm.com/db2) connector is one of [Conduit](https://github.com/ConduitIO/conduit) plugins. It provides both, a source and a destination DB2 connector.
+The [DB2](https://www.ibm.com/db2) connector is one of [Conduit](https://github.com/ConduitIO/conduit) plugins.
+It provides both, a source and a destination DB2 connector.
 
 ### Prerequisites
 
@@ -120,8 +121,16 @@ The command will handle starting and stopping docker containers for you.
 
 ## Destination
 
-The DB2 Destination takes a `record.Record` and parses it into a valid SQL query. The Destination is designed to handle different payloads and keys.
+The DB2 Destination takes a `sdk.Record` and parses it into a valid SQL query. The Destination is designed to handle different payloads and keys.
 Because of this, each record is individually parsed and upserted.
+
+### Configuration Options
+
+| Name         | Description                                                                          | Required | Example                                                                 |
+|--------------|--------------------------------------------------------------------------------------|----------|-------------------------------------------------------------------------|
+| `conn`       | String line  for connection  to  DB2                                                 | **true** | HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=password |
+| `table`      | The name of a table in the database that the connector should  write to, by default. | **true** | users                                                                   |
+| `primaryKey` | Column name used to detect if the target table already contains the record.          | **true** | id                                                                      |
 
 ### Table name
 
@@ -135,10 +144,126 @@ If the target table already contains a record with the same key, the Destination
 values. Because Keys must be unique, this can overwrite and thus potentially lose data, so keys should be assigned
 correctly from the Source.
 
-## Configuration Options
+## Source 
 
-| name         | description                                                                                       | required |
-|--------------|---------------------------------------------------------------------------------------------------| -------- |
-| `conn`       | String line  for connection  to  DB2                                                              | **true** |
-| `table`      | The name of a table in the database that the connector should  write to, by default.              | **true** |
-| `primaryKey` | Column name used to detect if the target table already contains the record.                       | **true** |
+The DB source connects to the database using the provided `conn` and starts creating records for each table row and
+each change detected.
+
+### Configuration options
+
+| Name             | Description                                                                                                                                                                                                   | Required | Example                                                                 |
+|------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|-------------------------------------------------------------------------|
+| `conn`           | String line  for connection  to  DB2                                                                                                                                                                          | **true** | HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=password |
+| `table`          | The name of a table in the database that the connector should  write to, by default.                                                                                                                          | **true** | users                                                                   |
+| `primaryKey`     | Column name that records should use for their `Key` fields.                                                                                                                                                   | **true** | id                                                                      |
+| `orderingColumn` | The name of a column that the connector will use for ordering rows. Its values must be unique and suitable for sorting, otherwise, the snapshot won't work correctly.                                         | **true** | id                                                                      |
+| `column`         | Comma separated list of column names that should be included in each Record's payload. If the field is not empty it must contain values of the `primaryKey` and `orderingColumn` fields. By default: all rows | false    | id,name,age                                                             |
+| `batchSize`      | Size of rows batch. By default is 1000                                                                                                                                                                        | false    | 100                                                                     |
+
+### Snapshot Iterator
+
+The snapshot iterator reads all rows from the table in batches via SELECT with fetching and ordering by `orderingColumn`.
+`OrderingColumn` value must be unique and suitable for sorting, otherwise, the snapshot won't work correctly
+Iterators saves last processed value from `primaryKey` column to position to field `SnapshotLastProcessedVal`. If snapshot stops,
+it will parse position from last record and will try gets row where `{{keyColumn}} > {{position.SnapshotLastProcessedVal}}`
+
+Example of a query:
+
+```
+SELECT {{columns...}}
+FROM {{table}}
+ORDER BY {{orderingColumn}}
+WHERE {{keyColumn}} > {{position.SnapshotLastProcessedVal}}
+LIMIT {{batchSize}};
+```
+
+When all records have been returned, the connector switches to the CDC iterator.
+
+### Change Data Captured (CDC)
+
+This connector implements CDC features for Oracle by adding a tracking table and triggers to populate it. The tracking
+table has the same name as a target table with the prefix `CONDUIT_TRACKING_`. The tracking table has all the
+same columns as the target table plus three additional columns:
+
+| name                            | description                                          |
+|---------------------------------|------------------------------------------------------|
+| `CONDUIT_TRACKING_ID`           | Autoincrement index for the position.                |
+| `CONDUIT_OPERATION_TYPE`        | Operation type: `insert`, `update`, or `delete`.     |
+| `CONDUIT_TRACKING_CREATED_DATE` | Date when the event was added to the tacking table.  |
+
+
+Triggers have name pattern `CONDUIT_TRIGGER_{{operation_type}}_{{table}}`. 
+
+
+The queries to get change data from the tracking table look pretty similar to queries in the Snapshot iterator, but
+with `CONDUIT_TRACKING_ID` ordering column.
+
+CDC iterator periodically clears rows which were successfully applied from tracking table. It is collects `CONDUIT_TRACKING_ID`
+inside `Ack` method  to the batch and clears tracking table each 5 seconds
+
+Iterator saves last `CONDUIT_TRACKING_ID` to position from last successfully recorded row.
+
+If connector stops,
+it will parse position from last record and will try gets row where `{{CONDUIT_TRACKING_ID}} > {{position.CDCLastID}}`
+
+
+### CDC FAQ
+
+#### Is it possible to add/remove/rename column to table?
+
+Yes. You have to stop pipeline and do the same thing to conduit tracking table too.
+For example:
+```sql
+ALTER TABLE CLIENTS
+ADD COLUMN phone VARCHAR(18);
+
+ALTER TABLE CONDUIT_TRACKING_CLIENTS
+    ADD COLUMN phone VARCHAR(18);
+```
+
+#### I accidentally remove tracking table.
+
+You have to restart pipeline, tracking table will be recreating by connector.
+
+#### I accidentally remove table.
+
+You have stop pipeline, remove conduit tracking table, then start pipeline.
+
+#### Is it possible to change table name?
+
+Yes. Please stop pipeline, change `table` value in source config, please change tracking table name uses pattern
+`CONDUIT_TRACKING_{{TABLE}}`
+
+
+### Position
+
+Position looks like:
+
+```go
+type Position struct {
+	// IteratorType - shows in what iterator was created position.
+	IteratorType IteratorType
+
+	// Snapshot information.
+	// SnapshotLastProcessedVal - last processed value from ordering column.
+	SnapshotLastProcessedVal any
+
+	// CDC information.
+	// CDCID - last processed id from tracking table.
+	CDCLastID int
+
+	// Time Created time.
+	Time time.Time
+}
+```
+
+Example of position:
+
+```json
+{
+  "iteratorType": "s",
+  "snapshotLastProcessedVal": 16,
+  "cdcLastID" : 3,
+  "time":"2021-02-18T21:54:42.123Z" 
+}
+```

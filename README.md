@@ -153,7 +153,7 @@ each change detected.
 
 | Name             | Description                                                                                                                                                                                                   | Required | Example                                                                 |
 |------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|-------------------------------------------------------------------------|
-| `conn`           | String line  for connection  to  DB2                                                                                                                                                                          | **true** | HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=password |
+| `connection`           | String line  for connection  to  DB2                                                                                                                                                                          | **true** | HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=password |
 | `table`          | The name of a table in the database that the connector should  write to, by default.                                                                                                                          | **true** | users                                                                   |
 | `primaryKey`     | Column name that records should use for their `Key` fields.                                                                                                                                                   | **true** | id                                                                      |
 | `orderingColumn` | The name of a column that the connector will use for ordering rows. Its values must be unique and suitable for sorting, otherwise, the snapshot won't work correctly.                                         | **true** | id                                                                      |
@@ -181,7 +181,7 @@ When all records have been returned, the connector switches to the CDC iterator.
 
 ### Change Data Captured (CDC)
 
-This connector implements CDC features for Oracle by adding a tracking table and triggers to populate it. The tracking
+This connector implements CDC features for DB2 by adding a tracking table and triggers to populate it. The tracking
 table has the same name as a target table with the prefix `CONDUIT_TRACKING_`. The tracking table has all the
 same columns as the target table plus three additional columns:
 

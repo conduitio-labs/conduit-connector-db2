@@ -11,7 +11,7 @@ It provides both, a source and a destination DB2 connector.
 - (optional) [golangci-lint](https://github.com/golangci/golangci-lint) 1.48.0
 - (optional) [mock](https://github.com/golang/mock) 1.6.0
 
-Connector uses go_ibm_db[go_ibm_db](https://github.com/ibmdb/go_ibm_db) library. This library required to install clidriver
+Connector uses [go_ibm_db](https://github.com/ibmdb/go_ibm_db) library. This library required to install clidriver
 
 
 #### How to Install in Windows

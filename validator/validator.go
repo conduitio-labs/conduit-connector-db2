@@ -62,6 +62,10 @@ func Validate(data any) error {
 				err = multierr.Append(err, maxErr(fieldName, e.Param()))
 			case containsOrDefaultTag:
 				err = multierr.Append(err, containsOrDefaultErr(fieldName, e.Param()))
+			case "gte":
+				err = multierr.Append(err, gteErr(fieldName, e.Param()))
+			case "lte":
+				err = multierr.Append(err, lteErr(fieldName, e.Param()))
 			}
 		}
 	}
@@ -137,4 +141,14 @@ func containsOrDefault(fl validator.FieldLevel) bool {
 	}
 
 	return len(valuesMap) == 0
+}
+
+// gteErr returns the formatted gte error.
+func gteErr(name, gte string) error {
+	return fmt.Errorf("%q value must be greater than or equal to %s", name, gte)
+}
+
+// lteErr returns the formatted lte error.
+func lteErr(name, lte string) error {
+	return fmt.Errorf("%q value must be less than or equal to %s", name, lte)
 }

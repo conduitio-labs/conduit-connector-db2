@@ -139,7 +139,9 @@ func (w *Writer) Upsert(ctx context.Context, record sdk.Record) error {
 
 	key, err := w.structurizeData(record.Key)
 	if err != nil {
-		return fmt.Errorf("structurize key: %w", err)
+		// if the key is not structured, we simply ignore it
+		// we'll try to insert just a payload in this case
+		sdk.Logger(ctx).Debug().Msgf("structurize key during upsert: %v", err)
 	}
 
 	keyColumn, err := w.getKeyColumn(key)

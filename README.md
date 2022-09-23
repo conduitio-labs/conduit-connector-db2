@@ -136,7 +136,7 @@ handle different payloads and keys. Because of this, each record is individually
 
 ### Table name
 
-If a record contains a `table` property in its metadata it will be inserted in that table, otherwise it will fall back
+If a record contains a `db2.table` property in its metadata it will be inserted in that table, otherwise it will fall back
 to use the table configured in the connector. Thus, a Destination can support multiple tables in a single connector,
 as long as the user has proper access to those tables.
 

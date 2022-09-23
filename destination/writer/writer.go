@@ -29,7 +29,7 @@ import (
 
 const (
 	// metadata related.
-	metadataTable = "table"
+	metadataTable = "d2.table"
 
 	// placeholder.
 	placeholder = "?"

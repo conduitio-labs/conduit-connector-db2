@@ -18,7 +18,7 @@ type actionType string
 
 const (
 	// metadata related.
-	metadataTable = "table"
+	metadataTable = "db2.table"
 
 	ActionInsert actionType = "INSERT"
 	ActionUpdate actionType = "UPDATE"

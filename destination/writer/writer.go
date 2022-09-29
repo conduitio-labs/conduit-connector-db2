@@ -93,10 +93,7 @@ func (w *Writer) Delete(ctx context.Context, record sdk.Record) error {
 		return ErrEmptyKey
 	}
 
-	query, args, err := w.buildDeleteQuery(tableName, keyColumn, keyValue)
-	if err != nil {
-		return fmt.Errorf("build delete query: %w", err)
-	}
+	query, args := w.buildDeleteQuery(tableName, keyColumn, keyValue)
 
 	_, err = w.db.ExecContext(ctx, query, args...)
 	if err != nil {
@@ -173,7 +170,7 @@ func (w *Writer) Upsert(ctx context.Context, record sdk.Record) error {
 
 // buildDeleteQuery generates an SQL DELETE statement query,
 // based on the provided table, keyColumn and keyValue.
-func (w *Writer) buildDeleteQuery(table string, keyColumn string, keyValue any) (string, []any, error) {
+func (w *Writer) buildDeleteQuery(table string, keyColumn string, keyValue any) (string, []any) {
 	db := sqlbuilder.NewDeleteBuilder()
 
 	db.DeleteFrom(table)
@@ -183,7 +180,7 @@ func (w *Writer) buildDeleteQuery(table string, keyColumn string, keyValue any) 
 
 	query, args := db.Build()
 
-	return query, args, nil
+	return query, args
 }
 
 // getKeyColumn returns either the first key within the Key structured data

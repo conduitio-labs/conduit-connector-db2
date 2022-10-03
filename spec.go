@@ -1,4 +1,4 @@
-// Copyright © 2022 Meroxa, Inc.
+// Copyright © 2022 Meroxa, Inc & Yalantis.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -28,6 +28,6 @@ func Specification() sdk.Specification {
 		Description: "The DB2 connector is one of Conduit plugins. " +
 			"It provides both, a source and a destination DB2 connector.",
 		Version: "v0.1.0",
-		Author:  "Meroxa, Inc.",
+		Author:  "Meroxa, Inc & Yalantis.",
 	}
 }

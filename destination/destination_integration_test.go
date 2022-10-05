@@ -50,7 +50,7 @@ func TestIntegrationDestination_Write_Success(t *testing.T) {
 
 	defer clearData(ctx, cfg[config.KeyConnection]) //nolint:errcheck,nolintlint
 
-	dest := &Destination{}
+	dest := New()
 
 	err = dest.Configure(ctx, cfg)
 	if err != nil {

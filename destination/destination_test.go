@@ -145,9 +145,6 @@ func TestDestination_Write(t *testing.T) {
 		record := sdk.Record{
 			Operation: sdk.OperationSnapshot,
 			Position:  sdk.Position("1.0"),
-			Metadata: map[string]string{
-				"action": "insert",
-			},
 			Key: sdk.StructuredData{
 				"ID": 1,
 			},

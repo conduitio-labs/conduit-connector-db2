@@ -38,6 +38,8 @@ type Position struct {
 	// Snapshot information.
 	// SnapshotLastProcessedVal - last processed value from ordering column.
 	SnapshotLastProcessedVal any
+	// SnapshotMaxValue - max value from ordering column.
+	SnapshotMaxValue any
 
 	// CDC information.
 	// CDCID - last processed id from tracking table.

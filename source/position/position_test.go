@@ -27,6 +27,7 @@ func TestParseSDKPosition(t *testing.T) {
 	snapshotPos := Position{
 		IteratorType:             TypeSnapshot,
 		SnapshotLastProcessedVal: 1,
+		SnapshotMaxValue:         4,
 		CDCLastID:                0,
 		Time: time.Date(
 			2009, 11, 17, 20, 34, 58, 651387237, time.UTC),
@@ -35,6 +36,7 @@ func TestParseSDKPosition(t *testing.T) {
 	wrongPosType := Position{
 		IteratorType:             "i",
 		SnapshotLastProcessedVal: 1,
+		SnapshotMaxValue:         4,
 		CDCLastID:                0,
 	}
 

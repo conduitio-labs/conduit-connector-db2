@@ -163,23 +163,17 @@ and each detected change.
 | `batchSize`             | Size of rows batch. By default is 1000                                                                                                                                                                        | false    | 100                                                                     |
 
 ### Snapshot Iterator
+First time when the snapshot iterator starts work, it is get max value from `orderingColumn` and saves this value to position.
+The snapshot iterator reads all rows, where `orderingColumn` values less or equal maxValue, from the table in batches
+via SELECT with fetching and ordering by `orderingColumn`.
 
-The snapshot iterator reads all rows from the table in batches via SELECT with fetching and ordering by `orderingColumn`.
-`OrderingColumn` value must be unique and suitable for sorting, otherwise, the snapshot won't work correctly.
-Iterators saves last processed value from `primaryKey` column to position to field `SnapshotLastProcessedVal`. If snapshot stops,
-it will parse position from last record and will try gets row where `{{keyColumn}} > {{position.SnapshotLastProcessedVal}}`
 
-Example of a query:
+`OrderingColumn` value must be unique and suitable for sorting, otherwise, the snapshot won't work correctly. 
+Iterators saves last processed value from `orderingColumn` column to position to field `SnapshotLastProcessedVal`. 
+If snapshot stops it will parse position from last record and will try gets row where `{{orderingColumn}} > {{position.SnapshotLastProcessedVal}}`
 
-```
-SELECT {{columns...}}
-FROM {{table}}
-ORDER BY {{orderingColumn}}
-WHERE {{keyColumn}} > {{position.SnapshotLastProcessedVal}}
-LIMIT {{batchSize}};
-```
 
-When all records are returned, the connector switches to the CDC iterator..
+When all records are returned, the connector switches to the CDC iterator.
 
 ### Change Data Captured (CDC)
 
@@ -252,6 +246,8 @@ type Position struct {
 	// Snapshot information.
 	// SnapshotLastProcessedVal - last processed value from ordering column.
 	SnapshotLastProcessedVal any
+	// SnapshotMaxValue - max value from ordering column.
+	SnapshotMaxValue any
 
 	// CDC information.
 	// CDCID - last processed id from tracking table.
@@ -268,6 +264,7 @@ Example of position:
 {
   "iteratorType": "s",
   "snapshotLastProcessedVal": 16,
+  "SnapshotMaxValue": 30,
   "cdcLastID" : 3,
   "time":"2021-02-18T21:54:42.123Z" 
 }

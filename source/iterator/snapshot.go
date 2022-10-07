@@ -128,6 +128,7 @@ func (i *SnapshotIterator) Next(ctx context.Context) (sdk.Record, error) {
 	pos := position.Position{
 		IteratorType:             position.TypeSnapshot,
 		SnapshotLastProcessedVal: transformedRow[i.orderingColumn],
+		SnapshotMaxValue:         i.maxValue,
 		Time:                     time.Now(),
 	}
 

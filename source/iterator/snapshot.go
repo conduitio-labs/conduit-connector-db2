@@ -42,6 +42,8 @@ type SnapshotIterator struct {
 	key string
 	// orderingColumn Name of column what iterator using for sorting data.
 	orderingColumn string
+	// maxValue from ordering column.
+	maxValue any
 	// batchSize size of batch.
 	batchSize int
 	// position last recorded position.
@@ -75,6 +77,15 @@ func NewSnapshotIterator(
 	err = snapshotIterator.loadRows(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("load rows: %w", err)
+	}
+
+	if position != nil {
+		snapshotIterator.maxValue = position.SnapshotMaxValue
+	} else {
+		err = snapshotIterator.setMaxValue(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("set max value: %w", err)
+		}
 	}
 
 	return snapshotIterator, nil
@@ -175,6 +186,7 @@ func (i *SnapshotIterator) loadRows(ctx context.Context) error {
 	if i.position != nil {
 		selectBuilder.Where(
 			selectBuilder.GreaterThan(i.orderingColumn, i.position.SnapshotLastProcessedVal),
+			selectBuilder.LessEqualThan(i.orderingColumn, i.position.SnapshotMaxValue),
 		)
 	}
 
@@ -189,6 +201,27 @@ func (i *SnapshotIterator) loadRows(ctx context.Context) error {
 	}
 
 	i.rows = rows
+
+	return nil
+}
+
+// getMaxValue get max value from ordered column.
+func (i *SnapshotIterator) setMaxValue(ctx context.Context) error {
+	rows, err := i.db.QueryxContext(ctx, fmt.Sprintf(queryGetMaxValue, i.orderingColumn, i.table))
+	if err != nil {
+		return fmt.Errorf("execute query get max value: %w", err)
+	}
+	defer rows.Close()
+
+	var maxValue any
+	for rows.Next() {
+		err = rows.Scan(&maxValue)
+		if err != nil {
+			return fmt.Errorf("scan row: %w", err)
+		}
+	}
+
+	i.maxValue = maxValue
 
 	return nil
 }

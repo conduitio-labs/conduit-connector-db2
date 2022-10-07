@@ -58,6 +58,8 @@ const (
       END
 	`
 
+	queryGetMaxValue = `SELECT max(%s) FROM %s`
+
 	placeholderOperationType = "{{operation_type}}"
 	placeholderTable         = "{{table}}"
 	placeholderRowType       = "{{row_type}}"

@@ -181,7 +181,7 @@ func (c *CombinedIterator) SetupCDC(ctx context.Context, db *sqlx.DB) error {
 		return fmt.Errorf("add index: %w", err)
 	}
 
-	triggersQuery := buildTriggers(c.trackingTable, c.table, c.columnTypes, c.columns)
+	triggersQuery := buildTriggers(c.trackingTable, c.table, c.columnTypes)
 
 	// add trigger to catch insert.
 	_, err = tx.ExecContext(ctx, triggersQuery.queryTriggerCatchInsert)

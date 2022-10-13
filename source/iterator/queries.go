@@ -71,15 +71,11 @@ type queryTriggers struct {
 	queryTriggerCatchDelete string
 }
 
-func buildTriggers(trackingTable, table string, columnsTypes map[string]string, columns []string) queryTriggers {
+func buildTriggers(trackingTable, table string, columnsTypes map[string]string) queryTriggers {
 	columnNames := make([]string, 0)
 
-	if columns != nil {
-		columnNames = append(columnNames, columns...)
-	} else {
-		for key := range columnsTypes {
-			columnNames = append(columnNames, key)
-		}
+	for key := range columnsTypes {
+		columnNames = append(columnNames, key)
 	}
 
 	nwValues := make([]string, len(columnNames))

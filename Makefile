@@ -2,8 +2,10 @@ GOLINT := golangci-lint
 
 .PHONY: build test
 
+VERSION=$(shell git describe --tags --dirty --always)
+
 build:
-	go build -o conduit-connector-db2 cmd/db2/main.go
+	go build -ldflags "-X 'github.com/conduitio-labs/conduit-connector-db2.version=${VERSION}'" -o conduit-connector-db2 cmd/connector/main.go
 
 test:
 	go test $(GOTEST_FLAGS) -race -gcflags=all=-d=checkptr=0 ./...

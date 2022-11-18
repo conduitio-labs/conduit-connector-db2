@@ -127,11 +127,11 @@ The DB2 Destination takes a `sdk.Record` and parses it into a valid SQL query.
 
 ### Configuration Options
 
-| Name         | Description                                                                          | Required | Example                                                                 |
-|--------------|--------------------------------------------------------------------------------------|----------|-------------------------------------------------------------------------|
-| `conn`       | String line  for connection  to  DB2                                                 | **true** | HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=password |
-| `table`      | The name of a table in the database that the connector should  write to, by default. | **true** | users                                                                   |
-| `primaryKey` | Column name used to detect if the target table already contains the record.          | **true** | id                                                                      |
+| Name               | Description                                                                          | Required | Example                                                                 |
+|--------------------|--------------------------------------------------------------------------------------|----------|-------------------------------------------------------------------------|
+| `connection`       | String line  for connection  to  DB2                                                 | **true** | HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=password |
+| `table`            | The name of a table in the database that the connector should  write to, by default. | **true** | users                                                                   |
+| `primaryKey`       | Column name used to detect if the target table already contains the record.          | **true** | id                                                                      |
 
 ### Table name
 

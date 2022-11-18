@@ -149,7 +149,7 @@ func ConvertStructureData(
 				return nil, ErrValueIsNotAString
 			}
 
-			timeValue, err := parseToTime(valueStr)
+			timeValue, err := parseTime(valueStr)
 			if err != nil {
 				return nil, fmt.Errorf("convert value to time.Time: %w", err)
 			}
@@ -220,7 +220,7 @@ func GetColumnTypes(ctx context.Context, querier Querier, tableName string) (map
 	return columnTypes, nil
 }
 
-func parseToTime(val string) (time.Time, error) {
+func parseTime(val string) (time.Time, error) {
 	for _, l := range layouts {
 		timeValue, err := time.Parse(l, val)
 		if err != nil {

@@ -47,7 +47,7 @@ func Test_parseToTime(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			_, err := parseToTime(tt.strValue)
+			_, err := parseTime(tt.strValue)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Parse() error = %v, wantErr %v", err, tt.wantErr)
 

@@ -28,8 +28,17 @@ import (
 	"github.com/conduitio-labs/conduit-connector-db2/source/position"
 )
 
-// SnapshotIterator - snapshot iterator.
-type SnapshotIterator struct {
+// snapshotIterator - iterator which get snapshot data.
+// A "snapshot" is the state of a table data at a particular point in time when connector starts work.
+// First time when the snapshot iterator starts work, it is get max value from `orderingColumn` and saves
+// this value to position.
+// The snapshot iterator reads all rows, where `orderingColumn` values less or equal maxValue,
+// from the table in batches.
+// Values in the ordering column must be unique and suitable for sorting, otherwise, the snapshot won't work correctly.
+// Iterators saves last processed value from `orderingColumn` column to position to field `SnapshotLastProcessedVal`.
+// If snapshot stops it will parse position from last record and will
+// try gets row where `{{orderingColumn}} > {{position.SnapshotLastProcessedVal}}`.
+type snapshotIterator struct {
 	db   *sqlx.DB
 	rows *sqlx.Rows
 
@@ -52,7 +61,7 @@ type SnapshotIterator struct {
 	columnTypes map[string]string
 }
 
-func NewSnapshotIterator(
+func newSnapshotIterator(
 	ctx context.Context,
 	db *sqlx.DB,
 	table, orderingColumn, key string,
@@ -60,10 +69,10 @@ func NewSnapshotIterator(
 	batchSize int,
 	position *position.Position,
 	columnTypes map[string]string,
-) (*SnapshotIterator, error) {
+) (*snapshotIterator, error) {
 	var err error
 
-	snapshotIterator := &SnapshotIterator{
+	it := &snapshotIterator{
 		db:             db,
 		table:          table,
 		columns:        columns,
@@ -74,25 +83,25 @@ func NewSnapshotIterator(
 		columnTypes:    columnTypes,
 	}
 
-	err = snapshotIterator.loadRows(ctx)
+	err = it.loadRows(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("load rows: %w", err)
 	}
 
 	if position != nil {
-		snapshotIterator.maxValue = position.SnapshotMaxValue
+		it.maxValue = position.SnapshotMaxValue
 	} else {
-		err = snapshotIterator.setMaxValue(ctx)
+		err = it.setMaxValue(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("set max value: %w", err)
 		}
 	}
 
-	return snapshotIterator, nil
+	return it, nil
 }
 
 // HasNext check ability to get next record.
-func (i *SnapshotIterator) HasNext(ctx context.Context) (bool, error) {
+func (i *snapshotIterator) HasNext(ctx context.Context) (bool, error) {
 	if i.rows != nil && i.rows.Next() {
 		return true, nil
 	}
@@ -110,7 +119,7 @@ func (i *SnapshotIterator) HasNext(ctx context.Context) (bool, error) {
 }
 
 // Next get new record.
-func (i *SnapshotIterator) Next(ctx context.Context) (sdk.Record, error) {
+func (i *snapshotIterator) Next(ctx context.Context) (sdk.Record, error) {
 	row := make(map[string]any)
 	if err := i.rows.MapScan(row); err != nil {
 		return sdk.Record{}, fmt.Errorf("scan rows: %w", err)
@@ -122,7 +131,7 @@ func (i *SnapshotIterator) Next(ctx context.Context) (sdk.Record, error) {
 	}
 
 	if _, ok := transformedRow[i.orderingColumn]; !ok {
-		return sdk.Record{}, ErrOrderingColumnIsNotExist
+		return sdk.Record{}, ErrNoOrderingColumn
 	}
 
 	pos := position.Position{
@@ -132,13 +141,13 @@ func (i *SnapshotIterator) Next(ctx context.Context) (sdk.Record, error) {
 		Time:                     time.Now(),
 	}
 
-	convertedPosition, err := pos.ConvertToSDKPosition()
+	sdkPos, err := pos.ConvertToSDKPosition()
 	if err != nil {
 		return sdk.Record{}, fmt.Errorf("convert position %w", err)
 	}
 
 	if _, ok := transformedRow[i.key]; !ok {
-		return sdk.Record{}, ErrKeyIsNotExist
+		return sdk.Record{}, ErrNoKey
 	}
 
 	transformedRowBytes, err := json.Marshal(transformedRow)
@@ -151,12 +160,16 @@ func (i *SnapshotIterator) Next(ctx context.Context) (sdk.Record, error) {
 	metadata := sdk.Metadata(map[string]string{metadataTable: i.table})
 	metadata.SetCreatedAt(time.Now())
 
-	return sdk.Util.Source.NewRecordSnapshot(convertedPosition, metadata,
-		sdk.StructuredData{i.key: transformedRow[i.key]}, sdk.RawData(transformedRowBytes)), nil
+	return sdk.Util.Source.NewRecordSnapshot(
+			sdkPos,
+			metadata,
+			sdk.StructuredData{i.key: transformedRow[i.key]},
+			sdk.RawData(transformedRowBytes)),
+		nil
 }
 
 // Stop shutdown iterator.
-func (i *SnapshotIterator) Stop() error {
+func (i *snapshotIterator) Stop() error {
 	if i.rows != nil {
 		err := i.rows.Close()
 		if err != nil {
@@ -173,25 +186,25 @@ func (i *SnapshotIterator) Stop() error {
 
 // LoadRows selects a batch of rows from a database, based on the CombinedIterator's
 // table, columns, orderingColumn, batchSize and the current position.
-func (i *SnapshotIterator) loadRows(ctx context.Context) error {
-	selectBuilder := sqlbuilder.NewSelectBuilder()
+func (i *snapshotIterator) loadRows(ctx context.Context) error {
+	builder := sqlbuilder.NewSelectBuilder()
 
 	if len(i.columns) > 0 {
-		selectBuilder.Select(i.columns...)
+		builder.Select(i.columns...)
 	} else {
-		selectBuilder.Select("*")
+		builder.Select("*")
 	}
 
-	selectBuilder.From(i.table)
+	builder.From(i.table)
 
 	if i.position != nil {
-		selectBuilder.Where(
-			selectBuilder.GreaterThan(i.orderingColumn, i.position.SnapshotLastProcessedVal),
-			selectBuilder.LessEqualThan(i.orderingColumn, i.position.SnapshotMaxValue),
+		builder.Where(
+			builder.GreaterThan(i.orderingColumn, i.position.SnapshotLastProcessedVal),
+			builder.LessEqualThan(i.orderingColumn, i.position.SnapshotMaxValue),
 		)
 	}
 
-	q, args := selectBuilder.
+	q, args := builder.
 		OrderBy(i.orderingColumn).
 		Limit(i.batchSize).
 		Build()
@@ -207,7 +220,7 @@ func (i *SnapshotIterator) loadRows(ctx context.Context) error {
 }
 
 // getMaxValue get max value from ordered column.
-func (i *SnapshotIterator) setMaxValue(ctx context.Context) error {
+func (i *snapshotIterator) setMaxValue(ctx context.Context) error {
 	rows, err := i.db.QueryxContext(ctx, fmt.Sprintf(queryGetMaxValue, i.orderingColumn, i.table))
 	if err != nil {
 		return fmt.Errorf("execute query get max value: %w", err)

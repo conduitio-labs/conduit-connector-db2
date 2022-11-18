@@ -29,6 +29,11 @@ import (
 	"github.com/conduitio-labs/conduit-connector-db2/source/position"
 )
 
+const (
+	waitingTimeoutSec            = 20
+	clearTrackingTableTimeoutSec = 5
+)
+
 // trackingTableService service for clearing tracking table.
 type trackingTableService struct {
 	m sync.Mutex
@@ -63,8 +68,8 @@ func (t *trackingTableService) close() {
 	close(t.stopCh)
 }
 
-// CDCIterator - cdc iterator.
-type CDCIterator struct {
+// cdcIterator - cdc iterator.
+type cdcIterator struct {
 	db   *sqlx.DB
 	rows *sqlx.Rows
 
@@ -88,20 +93,20 @@ type CDCIterator struct {
 	columnTypes map[string]string
 }
 
-// NewCDCIterator create new cdc iterator.
-func NewCDCIterator(
+// newCDCIterator create new cdc iterator.
+func newCDCIterator(
 	ctx context.Context,
 	db *sqlx.DB,
 	table string, trackingTable, key string,
 	columns []string,
 	batchSize int,
 	position *position.Position,
-) (*CDCIterator, error) {
+) (*cdcIterator, error) {
 	var (
 		err error
 	)
 
-	cdcIterator := &CDCIterator{
+	it := &cdcIterator{
 		db:            db,
 		table:         table,
 		trackingTable: trackingTable,
@@ -112,24 +117,24 @@ func NewCDCIterator(
 		tableSrv:      newTrackingTableService(),
 	}
 
-	if err = cdcIterator.loadRows(ctx); err != nil {
+	if err = it.loadRows(ctx); err != nil {
 		return nil, fmt.Errorf("load rows: %w", err)
 	}
 
 	// get column types for converting.
-	cdcIterator.columnTypes, err = coltypes.GetColumnTypes(ctx, db, trackingTable)
+	it.columnTypes, err = coltypes.GetColumnTypes(ctx, db, trackingTable)
 	if err != nil {
 		return nil, fmt.Errorf("get table column types: %w", err)
 	}
 
 	// run clearing tracking table.
-	go cdcIterator.clearTrackingTable(ctx)
+	go it.clearTrackingTable(ctx)
 
-	return cdcIterator, nil
+	return it, nil
 }
 
 // HasNext check ability to get next record.
-func (i *CDCIterator) HasNext(ctx context.Context) (bool, error) {
+func (i *cdcIterator) HasNext(ctx context.Context) (bool, error) {
 	if i.rows != nil && i.rows.Next() {
 		return true, nil
 	}
@@ -142,7 +147,7 @@ func (i *CDCIterator) HasNext(ctx context.Context) (bool, error) {
 }
 
 // Next get new record.
-func (i *CDCIterator) Next(ctx context.Context) (sdk.Record, error) {
+func (i *cdcIterator) Next(ctx context.Context) (sdk.Record, error) {
 	row := make(map[string]any)
 	if err := i.rows.MapScan(row); err != nil {
 		return sdk.Record{}, fmt.Errorf("scan rows: %w", err)
@@ -175,7 +180,7 @@ func (i *CDCIterator) Next(ctx context.Context) (sdk.Record, error) {
 	}
 
 	if _, ok = transformedRow[i.key]; !ok {
-		return sdk.Record{}, ErrKeyIsNotExist
+		return sdk.Record{}, ErrNoKey
 	}
 
 	// delete tracking columns
@@ -209,7 +214,7 @@ func (i *CDCIterator) Next(ctx context.Context) (sdk.Record, error) {
 }
 
 // Stop shutdown iterator.
-func (i *CDCIterator) Stop() error {
+func (i *cdcIterator) Stop() error {
 	// send signal for finish clear tracking table.
 	i.tableSrv.stopCh <- struct{}{}
 
@@ -241,7 +246,7 @@ func (i *CDCIterator) Stop() error {
 }
 
 // Ack check if record with position was recorded.
-func (i *CDCIterator) Ack(ctx context.Context, pos *position.Position) error {
+func (i *cdcIterator) Ack(ctx context.Context, pos *position.Position) error {
 	if len(i.tableSrv.errCh) > 0 {
 		for v := range i.tableSrv.errCh {
 			return fmt.Errorf("clear tracking table: %w", v)
@@ -263,7 +268,7 @@ func (i *CDCIterator) Ack(ctx context.Context, pos *position.Position) error {
 
 // LoadRows selects a batch of rows from a database, based on the
 // table, columns, orderingColumn, batchSize and the current position.
-func (i *CDCIterator) loadRows(ctx context.Context) error {
+func (i *cdcIterator) loadRows(ctx context.Context) error {
 	selectBuilder := sqlbuilder.NewSelectBuilder()
 
 	if len(i.columns) > 0 {
@@ -298,7 +303,7 @@ func (i *CDCIterator) loadRows(ctx context.Context) error {
 }
 
 // deleteRows - delete rows from tracking table.
-func (i *CDCIterator) deleteRows(ctx context.Context) error {
+func (i *cdcIterator) deleteRows(ctx context.Context) error {
 	i.tableSrv.m.Lock()
 	defer i.tableSrv.m.Unlock()
 
@@ -335,7 +340,7 @@ func (i *CDCIterator) deleteRows(ctx context.Context) error {
 	return nil
 }
 
-func (i *CDCIterator) clearTrackingTable(ctx context.Context) {
+func (i *cdcIterator) clearTrackingTable(ctx context.Context) {
 	for {
 		select {
 		// connector is stopping, clear table last time.

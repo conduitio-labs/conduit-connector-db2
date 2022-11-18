@@ -23,7 +23,4 @@ const (
 	ActionInsert actionType = "INSERT"
 	ActionUpdate actionType = "UPDATE"
 	ActionDelete actionType = "DELETE"
-
-	waitingTimeoutSec            = 20
-	clearTrackingTableTimeoutSec = 5
 )

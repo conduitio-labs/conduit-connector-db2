@@ -59,13 +59,11 @@ func ParseSDKPosition(p sdk.Position) (*Position, error) {
 
 	err := json.Unmarshal(p, &pos)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed unmarshaling: %w", err)
 	}
 
 	switch pos.IteratorType {
-	case TypeSnapshot:
-		return &pos, nil
-	case TypeCDC:
+	case TypeSnapshot, TypeCDC:
 		return &pos, nil
 	default:
 		return nil, fmt.Errorf("%w : %s", ErrUnknownIteratorType, pos.IteratorType)

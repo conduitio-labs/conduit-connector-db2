@@ -36,8 +36,8 @@ const (
 
 // CombinedIterator combined iterator.
 type CombinedIterator struct {
-	cdc      *CDCIterator
-	snapshot *SnapshotIterator
+	cdc      *cdcIterator
+	snapshot *snapshotIterator
 
 	// connection string.
 	conn string
@@ -98,13 +98,13 @@ func NewCombinedIterator(
 	}
 
 	if pos == nil || pos.IteratorType == position.TypeSnapshot {
-		it.snapshot, err = NewSnapshotIterator(ctx, db, table, orderingColumn, key, columns,
+		it.snapshot, err = newSnapshotIterator(ctx, db, table, orderingColumn, key, columns,
 			batchSize, pos, it.columnTypes)
 		if err != nil {
 			return nil, fmt.Errorf("new shapshot iterator: %w", err)
 		}
 	} else {
-		it.cdc, err = NewCDCIterator(ctx, db, it.table, it.trackingTable, it.key,
+		it.cdc, err = newCDCIterator(ctx, db, it.table, it.trackingTable, it.key,
 			it.columns, it.batchSize, pos)
 		if err != nil {
 			return nil, fmt.Errorf("new shapshot iterator: %w", err)
@@ -293,7 +293,7 @@ func (c *CombinedIterator) switchToCDCIterator(ctx context.Context) error {
 		return err
 	}
 
-	c.cdc, err = NewCDCIterator(ctx, db, c.table, c.trackingTable, c.key,
+	c.cdc, err = newCDCIterator(ctx, db, c.table, c.trackingTable, c.key,
 		c.columns, c.batchSize, nil)
 	if err != nil {
 		return fmt.Errorf("new cdc iterator: %w", err)

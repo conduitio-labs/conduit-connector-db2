@@ -55,7 +55,7 @@ func (d *Destination) Parameters() map[string]sdk.Parameter {
 		},
 		config.KeyPrimaryKey: {
 			Description: "A column name that used to detect if the target table" +
-				" already contains the record (destination).",
+				" already contains the record (destination). It must be unique",
 			Required: true,
 			Default:  "",
 		},

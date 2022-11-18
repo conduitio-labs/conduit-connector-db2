@@ -49,7 +49,7 @@ func (d *Destination) Parameters() map[string]sdk.Parameter {
 			Default:     "",
 		},
 		config.KeyTable: {
-			Description: "A name of the table that the connector should write to.",
+			Description: "name of the table that the connector should write to.",
 			Required:    true,
 			Default:     "",
 		},

@@ -19,4 +19,4 @@ jobs:
       - name: Test
         env:
           conn: ${{ secrets.DB2_CONNECTION }}
-        run: make test GOTEST_FLAGS="-v -race -count=1"
+        run: make test

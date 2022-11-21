@@ -155,7 +155,7 @@ func ConvertStructureData(
 			}
 
 			result[key] = timeValue
-		// DecimalFlot must be number.
+		// DecimalFloat must be a number.
 		case decimalFloat:
 			switch v := value.(type) {
 			case float64:

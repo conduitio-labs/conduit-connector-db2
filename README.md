@@ -56,31 +56,6 @@ If the target table already contains a record with the same key, the Destination
 values. Because Keys must be unique, this can lead to overwriting and potential data loss, so the keys must be
 correctly assigned from the Source.
 
-## Destination
-
-The DB2 Destination takes a `sdk.Record` and parses it into a valid SQL query.
-
-### Configuration Options
-
-| Name               | Description                                                                          | Required | Example                                                                 |
-|--------------------|--------------------------------------------------------------------------------------|----------|-------------------------------------------------------------------------|
-| `connection`       | String line  for connection  to  DB2                                                 | **true** | HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=password |
-| `table`            | The name of a table in the database that the connector should  write to, by default. | **true** | users                                                                   |
-| `primaryKey`       | Column name used to detect if the target table already contains the record.          | **true** | id                                                                      |
-
-### Table name
-
-If a record contains a `db2.table` property in its metadata it will be inserted in that table, otherwise it will fall back
-to use the table configured in the connector. Thus, a Destination can support multiple tables in a single connector,
-as long as the user has proper access to those tables.
-
-### Upsert Behavior
-
-If the target table already contains a record with the same key, the Destination will upsert with its current received
-values. Because Keys must be unique, this can lead to overwriting and potential data loss, so the keys must be
-correctly assigned from the Source.
-
-
 ## Source 
 
 The DB source connects to the database using the provided connection and starts creating records for each table row 
@@ -90,7 +65,7 @@ and each detected change.
 
 | Name                    | Description                                                                                                                                                                                                   | Required | Example                                                                 |
 |-------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|-------------------------------------------------------------------------|
-| `connection`            | String line  for connection  to  DB2                                                                                                                                                                          | **true** | HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=password |
+| `connection`            | String line for connection to DB2 ([format](https://github.com/ibmdb/go_ibm_db/blob/master/API_DOCUMENTATION.md#-1-opendrivernameconnectionstring)).                                                          | **true** | HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=password |
 | `table`                 | The name of a table in the database that the connector should  write to, by default.                                                                                                                          | **true** | users                                                                   |
 | `primaryKey`            | Column name that records should use for their `Key` fields.                                                                                                                                                   | **true** | id                                                                      |
 | `orderingColumn`        | The name of a column that the connector will use for ordering rows. Its values must be unique and suitable for sorting, otherwise, the snapshot won't work correctly.                                         | **true** | id                                                                      |

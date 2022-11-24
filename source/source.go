@@ -53,9 +53,9 @@ func (s *Source) Parameters() map[string]sdk.Parameter {
 			Required:    true,
 			Default:     "",
 		},
-		config.KeyPrimaryKey: {
-			Description: "A name of column that connector will use for create record key",
-			Required:    true,
+		KeyPrimaryKeys: {
+			Description: "A names of columns that connector will use for create record key",
+			Required:    false,
 			Default:     "",
 		},
 		KeyOrderingColumn: {
@@ -96,7 +96,7 @@ func (s *Source) Open(ctx context.Context, rp sdk.Position) error {
 	}
 
 	s.iterator, err = iterator.NewCombinedIterator(ctx, db, s.config.Connection,
-		s.config.Table, s.config.Key, s.config.OrderingColumn, s.config.Columns, s.config.BatchSize, rp)
+		s.config.Table, s.config.OrderingColumn, s.config.PrimaryKeys, s.config.Columns, s.config.BatchSize, rp)
 	if err != nil {
 		return fmt.Errorf("new iterator: %w", err)
 	}

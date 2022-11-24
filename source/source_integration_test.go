@@ -374,7 +374,6 @@ func prepareConfig() (map[string]string, error) {
 	return map[string]string{
 		config.KeyConnection: connection,
 		config.KeyTable:      table,
-		config.KeyPrimaryKey: "ID",
 		KeyOrderingColumn:    "ID",
 	}, nil
 }

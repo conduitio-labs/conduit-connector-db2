@@ -49,8 +49,8 @@ type CombinedIterator struct {
 	// columns list of table columns for record payload
 	// if empty - will get all columns.
 	columns []string
-	// key Name of column what iterator use for setting key in record.
-	key string
+	// keys Names of columns what iterator use for setting key in record.
+	keys []string
 	// orderingColumn Name of column what iterator use for sorting data.
 	orderingColumn string
 	// batchSize size of batch.
@@ -63,8 +63,8 @@ type CombinedIterator struct {
 func NewCombinedIterator(
 	ctx context.Context,
 	db *sqlx.DB,
-	conn, table, key, orderingColumn string,
-	columns []string,
+	conn, table, orderingColumn string,
+	cfgKeys, columns []string,
 	batchSize int,
 	sdkPosition sdk.Position,
 ) (*CombinedIterator, error) {
@@ -74,17 +74,18 @@ func NewCombinedIterator(
 		conn:           conn,
 		table:          table,
 		columns:        columns,
-		key:            key,
 		orderingColumn: orderingColumn,
 		batchSize:      batchSize,
 		trackingTable:  fmt.Sprintf(trackingTablePattern, table),
 	}
 
-	// get column types for converting.
-	it.columnTypes, err = coltypes.GetColumnTypes(ctx, db, table)
+	// get column types for converting and get primary keys information
+	it.columnTypes, it.keys, err = coltypes.GetColumnTypes(ctx, db, table)
 	if err != nil {
 		return nil, fmt.Errorf("get table column types: %w", err)
 	}
+
+	it.setKeys(cfgKeys)
 
 	// create tracking table, create triggers for cdc logic.
 	err = it.SetupCDC(ctx, db)
@@ -98,14 +99,14 @@ func NewCombinedIterator(
 	}
 
 	if pos == nil || pos.IteratorType == position.TypeSnapshot {
-		it.snapshot, err = newSnapshotIterator(ctx, db, table, orderingColumn, key, columns,
+		it.snapshot, err = newSnapshotIterator(ctx, db, it.table, orderingColumn, it.keys, columns,
 			batchSize, pos, it.columnTypes)
 		if err != nil {
 			return nil, fmt.Errorf("new shapshot iterator: %w", err)
 		}
 	} else {
-		it.cdc, err = newCDCIterator(ctx, db, it.table, it.trackingTable, it.key,
-			it.columns, it.batchSize, pos)
+		it.cdc, err = newCDCIterator(ctx, db, it.table, it.trackingTable, it.keys,
+			it.columns, it.batchSize, it.columnTypes, pos)
 		if err != nil {
 			return nil, fmt.Errorf("new shapshot iterator: %w", err)
 		}
@@ -293,11 +294,29 @@ func (c *CombinedIterator) switchToCDCIterator(ctx context.Context) error {
 		return err
 	}
 
-	c.cdc, err = newCDCIterator(ctx, db, c.table, c.trackingTable, c.key,
-		c.columns, c.batchSize, nil)
+	c.cdc, err = newCDCIterator(ctx, db, c.table, c.trackingTable, c.keys,
+		c.columns, c.batchSize, c.columnTypes, nil)
 	if err != nil {
 		return fmt.Errorf("new cdc iterator: %w", err)
 	}
 
 	return nil
+}
+
+func (c *CombinedIterator) setKeys(cfgKeys []string) {
+	// first priority keys from config.
+	if len(cfgKeys) > 0 {
+		c.keys = cfgKeys
+		return
+	}
+
+	// second priority primary keys from table.
+	if len(c.keys) > 0 {
+		return
+	}
+
+	// last priority ordering column.
+	c.keys = []string{c.orderingColumn}
+
+	return
 }

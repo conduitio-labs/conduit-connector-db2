@@ -43,7 +43,6 @@ func TestSource_Configure(t *testing.T) {
 			cfg: map[string]string{
 				config.KeyConnection: "HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=pwd",
 				config.KeyTable:      "CLIENTS",
-				config.KeyPrimaryKey: "ID",
 				KeyColumns:           "",
 				KeyOrderingColumn:    "ID",
 				KeyBatchSize:         "",
@@ -55,7 +54,6 @@ func TestSource_Configure(t *testing.T) {
 			cfg: map[string]string{
 				config.KeyConnection: "HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=pwd",
 				config.KeyTable:      "CLIENTS",
-				config.KeyPrimaryKey: "ID",
 				KeyColumns:           "",
 				KeyOrderingColumn:    "ID",
 				KeyBatchSize:         "50",
@@ -67,7 +65,6 @@ func TestSource_Configure(t *testing.T) {
 			cfg: map[string]string{
 				config.KeyConnection: "HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=pwd",
 				config.KeyTable:      "CLIENTS",
-				config.KeyPrimaryKey: "ID",
 				KeyColumns:           "ID,NAME",
 				KeyOrderingColumn:    "ID",
 				KeyBatchSize:         "50",
@@ -79,7 +76,6 @@ func TestSource_Configure(t *testing.T) {
 			cfg: map[string]string{
 				config.KeyConnection: "HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=pwd",
 				config.KeyTable:      "CLIENTS",
-				config.KeyPrimaryKey: "ID",
 				KeyColumns:           "ID,NAME",
 				KeyBatchSize:         "50",
 			},

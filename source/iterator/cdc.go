@@ -83,8 +83,8 @@ type cdcIterator struct {
 	// columns list of table columns for record payload
 	// if empty - will get all columns.
 	columns []string
-	// key Name of column what iterator use for setting key in record.
-	key string
+	// keys Names of columns what iterator use for setting key in record.
+	keys []string
 	// batchSize size of batch.
 	batchSize int
 	// position last recorded position.
@@ -97,9 +97,10 @@ type cdcIterator struct {
 func newCDCIterator(
 	ctx context.Context,
 	db *sqlx.DB,
-	table string, trackingTable, key string,
-	columns []string,
+	table, trackingTable string,
+	keys, columns []string,
 	batchSize int,
+	columnTypes map[string]string,
 	position *position.Position,
 ) (*cdcIterator, error) {
 	var (
@@ -111,20 +112,15 @@ func newCDCIterator(
 		table:         table,
 		trackingTable: trackingTable,
 		columns:       columns,
-		key:           key,
+		keys:          keys,
 		batchSize:     batchSize,
 		position:      position,
+		columnTypes:   columnTypes,
 		tableSrv:      newTrackingTableService(),
 	}
 
 	if err = it.loadRows(ctx); err != nil {
 		return nil, fmt.Errorf("load rows: %w", err)
-	}
-
-	// get column types for converting.
-	it.columnTypes, err = coltypes.GetColumnTypes(ctx, db, trackingTable)
-	if err != nil {
-		return nil, fmt.Errorf("get table column types: %w", err)
 	}
 
 	// run clearing tracking table.
@@ -163,10 +159,12 @@ func (i *cdcIterator) Next(ctx context.Context) (sdk.Record, error) {
 		return sdk.Record{}, ErrWrongTrackingIDType
 	}
 
-	operationType, ok := transformedRow[columnOperationType].(string)
+	operationTypeBt, ok := transformedRow[columnOperationType].([]byte)
 	if !ok {
-		return sdk.Record{}, ErrWrongTrackingIDType
+		return sdk.Record{}, ErrWrongTrackingOperatorType
 	}
+
+	operationType := string(operationTypeBt)
 
 	pos := position.Position{
 		IteratorType: position.TypeCDC,
@@ -179,8 +177,13 @@ func (i *cdcIterator) Next(ctx context.Context) (sdk.Record, error) {
 		return sdk.Record{}, fmt.Errorf("convert position %w", err)
 	}
 
-	if _, ok = transformedRow[i.key]; !ok {
-		return sdk.Record{}, ErrNoKey
+	keysMap := make(map[string]any)
+	for _, val := range i.keys {
+		if _, ok := transformedRow[val]; !ok {
+			return sdk.Record{}, fmt.Errorf("key %v, %w", val, ErrNoKey)
+		}
+
+		keysMap[val] = transformedRow[val]
 	}
 
 	// delete tracking columns
@@ -201,13 +204,13 @@ func (i *cdcIterator) Next(ctx context.Context) (sdk.Record, error) {
 	switch actionType(operationType) {
 	case ActionInsert:
 		return sdk.Util.Source.NewRecordCreate(convertedPosition, metadata,
-			sdk.StructuredData{i.key: transformedRow[i.key]}, sdk.RawData(transformedRowBytes)), nil
+			sdk.StructuredData(keysMap), sdk.RawData(transformedRowBytes)), nil
 	case ActionUpdate:
 		return sdk.Util.Source.NewRecordUpdate(convertedPosition, metadata,
-			sdk.StructuredData{i.key: transformedRow[i.key]}, nil, sdk.RawData(transformedRowBytes)), nil
+			sdk.StructuredData(keysMap), nil, sdk.RawData(transformedRowBytes)), nil
 	case ActionDelete:
 		return sdk.Util.Source.NewRecordDelete(convertedPosition, metadata,
-			sdk.StructuredData{i.key: transformedRow[i.key]}), nil
+			sdk.StructuredData(keysMap)), nil
 	default:
 		return sdk.Record{}, ErrUnknownOperatorType
 	}

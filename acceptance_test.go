@@ -25,6 +25,7 @@ import (
 
 	"github.com/brianvoe/gofakeit"
 	sdk "github.com/conduitio/conduit-connector-sdk"
+	"go.uber.org/goleak"
 
 	"github.com/conduitio-labs/conduit-connector-db2/config"
 	s "github.com/conduitio-labs/conduit-connector-db2/source"
@@ -76,6 +77,10 @@ func TestAcceptance(t *testing.T) {
 				SourceConfig:      cfg,
 				DestinationConfig: cfg,
 				BeforeTest:        beforeTest(t, cfg),
+				GoleakOptions: []goleak.Option{
+					// imdb library leak.
+					goleak.IgnoreTopFunction("github.com/ibmdb/go_ibm_db/api._Cfunc_SQLDisconnect"),
+				},
 			},
 		},
 	})
@@ -106,7 +111,7 @@ func prepareConfig(t *testing.T) map[string]string {
 
 	return map[string]string{
 		config.KeyConnection: conn,
-		config.KeyPrimaryKey: "ID",
+		s.KeyPrimaryKeys:     "ID",
 		s.KeyOrderingColumn:  "ID",
 	}
 }

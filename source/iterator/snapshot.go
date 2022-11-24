@@ -47,8 +47,8 @@ type snapshotIterator struct {
 	// columns list of table columns for record payload
 	// if empty - will get all columns.
 	columns []string
-	// key Name of column what iterator use for setting key in record.
-	key string
+	// keys Names of columns what iterator use for setting key in record.
+	keys []string
 	// orderingColumn Name of column what iterator using for sorting data.
 	orderingColumn string
 	// maxValue from ordering column.
@@ -64,8 +64,8 @@ type snapshotIterator struct {
 func newSnapshotIterator(
 	ctx context.Context,
 	db *sqlx.DB,
-	table, orderingColumn, key string,
-	columns []string,
+	table, orderingColumn string,
+	keys, columns []string,
 	batchSize int,
 	position *position.Position,
 	columnTypes map[string]string,
@@ -76,7 +76,7 @@ func newSnapshotIterator(
 		db:             db,
 		table:          table,
 		columns:        columns,
-		key:            key,
+		keys:           keys,
 		orderingColumn: orderingColumn,
 		batchSize:      batchSize,
 		position:       position,
@@ -146,8 +146,13 @@ func (i *snapshotIterator) Next(ctx context.Context) (sdk.Record, error) {
 		return sdk.Record{}, fmt.Errorf("convert position %w", err)
 	}
 
-	if _, ok := transformedRow[i.key]; !ok {
-		return sdk.Record{}, ErrNoKey
+	keysMap := make(map[string]any)
+	for _, val := range i.keys {
+		if _, ok := transformedRow[val]; !ok {
+			return sdk.Record{}, fmt.Errorf("key %v, %w", val, ErrNoKey)
+		}
+
+		keysMap[val] = transformedRow[val]
 	}
 
 	transformedRowBytes, err := json.Marshal(transformedRow)
@@ -163,7 +168,7 @@ func (i *snapshotIterator) Next(ctx context.Context) (sdk.Record, error) {
 	return sdk.Util.Source.NewRecordSnapshot(
 			sdkPos,
 			metadata,
-			sdk.StructuredData{i.key: transformedRow[i.key]},
+			sdk.StructuredData(keysMap),
 			sdk.RawData(transformedRowBytes)),
 		nil
 }

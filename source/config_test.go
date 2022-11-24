@@ -39,7 +39,6 @@ func TestParse(t *testing.T) {
 				cfg: map[string]string{
 					config.KeyConnection: "HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=pwd",
 					config.KeyTable:      "CLIENTS",
-					config.KeyPrimaryKey: "ID",
 					KeyColumns:           "",
 					KeyOrderingColumn:    "ID",
 					KeyBatchSize:         "",
@@ -49,7 +48,6 @@ func TestParse(t *testing.T) {
 				Config: config.Config{
 					Connection: "HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=pwd",
 					Table:      "CLIENTS",
-					Key:        "ID",
 				},
 				OrderingColumn: "ID",
 				BatchSize:      defaultBatchSize,
@@ -62,7 +60,6 @@ func TestParse(t *testing.T) {
 				cfg: map[string]string{
 					config.KeyConnection: "HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=pwd",
 					config.KeyTable:      "CLIENTS",
-					config.KeyPrimaryKey: "ID",
 					KeyColumns:           "",
 					KeyOrderingColumn:    "ID",
 					KeyBatchSize:         "50",
@@ -72,7 +69,6 @@ func TestParse(t *testing.T) {
 				Config: config.Config{
 					Connection: "HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=pwd",
 					Table:      "CLIENTS",
-					Key:        "ID",
 				},
 				OrderingColumn: "ID",
 				BatchSize:      50,
@@ -85,7 +81,6 @@ func TestParse(t *testing.T) {
 				cfg: map[string]string{
 					config.KeyConnection: "HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=pwd",
 					config.KeyTable:      "CLIENTS",
-					config.KeyPrimaryKey: "id",
 					KeyColumns:           "id,name",
 					KeyOrderingColumn:    "ID",
 					KeyBatchSize:         "50",
@@ -95,11 +90,32 @@ func TestParse(t *testing.T) {
 				Config: config.Config{
 					Connection: "HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=pwd",
 					Table:      "CLIENTS",
-					Key:        "ID",
 				},
 				OrderingColumn: "ID",
 				BatchSize:      50,
 				Columns:        []string{"ID", "NAME"},
+			},
+			wantErr: false,
+		},
+		{
+			name: "success, custom keys",
+			args: args{
+				cfg: map[string]string{
+					config.KeyConnection: "HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=pwd",
+					config.KeyTable:      "CLIENTS",
+					KeyOrderingColumn:    "ID",
+					KeyPrimaryKeys:       "id",
+					KeyBatchSize:         "50",
+				},
+			},
+			want: Config{
+				Config: config.Config{
+					Connection: "HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=pwd",
+					Table:      "CLIENTS",
+				},
+				OrderingColumn: "ID",
+				PrimaryKeys:    []string{"ID"},
+				BatchSize:      50,
 			},
 			wantErr: false,
 		},
@@ -109,7 +125,6 @@ func TestParse(t *testing.T) {
 				cfg: map[string]string{
 					config.KeyConnection: "HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=pwd",
 					config.KeyTable:      "CLIENTS",
-					config.KeyPrimaryKey: "ID",
 					KeyColumns:           "ID,NAME",
 					KeyBatchSize:         "50",
 				},
@@ -122,7 +137,6 @@ func TestParse(t *testing.T) {
 				cfg: map[string]string{
 					config.KeyConnection: "HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=pwd",
 					config.KeyTable:      "CLIENTS",
-					config.KeyPrimaryKey: "ID",
 					KeyColumns:           "AGE,NAME",
 					KeyBatchSize:         "50",
 					KeyOrderingColumn:    "ID",

@@ -375,7 +375,6 @@ func prepareConfig() (map[string]string, error) {
 
 	return map[string]string{
 		config.KeyConnection: conn,
-		config.KeyPrimaryKey: "id",
 		config.KeyTable:      integrationTable,
 	}, nil
 }

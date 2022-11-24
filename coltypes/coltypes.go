@@ -60,9 +60,10 @@ var (
 	querySchemaColumnTypes = `
 			SELECT 
 				   colname as column_name,
-				   typename as data_type
-			from syscat.columns
-			where tabname = '%s'
+				   typename as data_type,
+				   keyseq 
+			FROM syscat.columns
+			WHERE tabname = '%s'
 `
 	// time layouts.
 	layouts = []string{time.RFC3339, time.RFC3339Nano, time.Layout, time.ANSIC, time.UnixDate, time.RubyDate,
@@ -200,24 +201,35 @@ func ConvertStructureData(
 	return result, nil
 }
 
-// GetColumnTypes returns a map containing all table's columns and their database types.
-func GetColumnTypes(ctx context.Context, querier Querier, tableName string) (map[string]string, error) {
+// GetColumnTypes returns a map containing all table's columns and their database types
+// and returns primary columns names.
+func GetColumnTypes(ctx context.Context, querier Querier, tableName string) (map[string]string, []string, error) {
 	rows, err := querier.QueryContext(ctx, fmt.Sprintf(querySchemaColumnTypes, tableName))
 	if err != nil {
-		return nil, fmt.Errorf("query column types: %w", err)
+		return nil, nil, fmt.Errorf("query column types: %w", err)
 	}
 
 	columnTypes := make(map[string]string)
+	primaryKeys := make([]string, 0)
+
 	for rows.Next() {
-		var columnName, dataType string
-		if er := rows.Scan(&columnName, &dataType); er != nil {
-			return nil, fmt.Errorf("scan rows: %w", er)
+		var (
+			columnName, dataType string
+			keyseq               *int
+		)
+		if er := rows.Scan(&columnName, &dataType, &keyseq); er != nil {
+			return nil, nil, fmt.Errorf("scan rows: %w", er)
 		}
 
 		columnTypes[columnName] = dataType
+
+		// check is it primary key.
+		if keyseq != nil && *keyseq == 1 {
+			primaryKeys = append(primaryKeys, columnName)
+		}
 	}
 
-	return columnTypes, nil
+	return columnTypes, primaryKeys, nil
 }
 
 func parseTime(val string) (time.Time, error) {

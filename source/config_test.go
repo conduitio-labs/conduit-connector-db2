@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/conduitio-labs/conduit-connector-db2/config"
+	"github.com/conduitio-labs/conduit-connector-db2/source/iterator"
 )
 
 func TestParse(t *testing.T) {
@@ -51,6 +52,7 @@ func TestParse(t *testing.T) {
 				},
 				OrderingColumn: "ID",
 				BatchSize:      defaultBatchSize,
+				SnapshotMode:   iterator.SnapshotModeInitial,
 			},
 			wantErr: false,
 		},
@@ -72,6 +74,7 @@ func TestParse(t *testing.T) {
 				},
 				OrderingColumn: "ID",
 				BatchSize:      50,
+				SnapshotMode:   iterator.SnapshotModeInitial,
 			},
 			wantErr: false,
 		},
@@ -94,6 +97,7 @@ func TestParse(t *testing.T) {
 				OrderingColumn: "ID",
 				BatchSize:      50,
 				Columns:        []string{"ID", "NAME"},
+				SnapshotMode:   iterator.SnapshotModeInitial,
 			},
 			wantErr: false,
 		},
@@ -116,6 +120,31 @@ func TestParse(t *testing.T) {
 				OrderingColumn: "ID",
 				PrimaryKeys:    []string{"ID"},
 				BatchSize:      50,
+				SnapshotMode:   iterator.SnapshotModeInitial,
+			},
+			wantErr: false,
+		},
+		{
+			name: "success, custom snapshotMode",
+			args: args{
+				cfg: map[string]string{
+					config.KeyConnection: "HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=pwd",
+					config.KeyTable:      "CLIENTS",
+					KeyOrderingColumn:    "ID",
+					KeyPrimaryKeys:       "id",
+					KeyBatchSize:         "50",
+					KeySnapshotMode:      "never",
+				},
+			},
+			want: Config{
+				Config: config.Config{
+					Connection: "HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=pwd",
+					Table:      "CLIENTS",
+				},
+				OrderingColumn: "ID",
+				PrimaryKeys:    []string{"ID"},
+				BatchSize:      50,
+				SnapshotMode:   iterator.SnapshotModeNever,
 			},
 			wantErr: false,
 		},
@@ -140,6 +169,20 @@ func TestParse(t *testing.T) {
 					KeyColumns:           "AGE,NAME",
 					KeyBatchSize:         "50",
 					KeyOrderingColumn:    "ID",
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "failed, invalid snapshot mode",
+			args: args{
+				cfg: map[string]string{
+					config.KeyConnection: "HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=pwd",
+					config.KeyTable:      "CLIENTS",
+					KeyColumns:           "AGE,NAME",
+					KeyBatchSize:         "50",
+					KeyOrderingColumn:    "ID",
+					KeySnapshotMode:      "mode",
 				},
 			},
 			wantErr: true,

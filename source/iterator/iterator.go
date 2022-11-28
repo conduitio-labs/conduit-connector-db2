@@ -34,6 +34,13 @@ const (
 	columnTrackingID    = "CONDUIT_TRACKING_ID"
 )
 
+const (
+	// SnapshotModeInitial take snapshot from table.
+	SnapshotModeInitial = "initial"
+	// SnapshotModeNever miss snapshot start with cdc.
+	SnapshotModeNever = "never"
+)
+
 // CombinedIterator combined iterator.
 type CombinedIterator struct {
 	cdc      *cdcIterator
@@ -63,7 +70,7 @@ type CombinedIterator struct {
 func NewCombinedIterator(
 	ctx context.Context,
 	db *sqlx.DB,
-	conn, table, orderingColumn string,
+	conn, table, orderingColumn, snapshotMode string,
 	cfgKeys, columns []string,
 	batchSize int,
 	sdkPosition sdk.Position,
@@ -98,7 +105,7 @@ func NewCombinedIterator(
 		return nil, fmt.Errorf("parse position: %w", err)
 	}
 
-	if pos == nil || pos.IteratorType == position.TypeSnapshot {
+	if snapshotMode == SnapshotModeInitial && (pos == nil || pos.IteratorType == position.TypeSnapshot) {
 		it.snapshot, err = newSnapshotIterator(ctx, db, it.table, orderingColumn, it.keys, columns,
 			batchSize, pos, it.columnTypes)
 		if err != nil {
@@ -307,6 +314,7 @@ func (c *CombinedIterator) setKeys(cfgKeys []string) {
 	// first priority keys from config.
 	if len(cfgKeys) > 0 {
 		c.keys = cfgKeys
+
 		return
 	}
 
@@ -317,6 +325,4 @@ func (c *CombinedIterator) setKeys(cfgKeys []string) {
 
 	// last priority ordering column.
 	c.keys = []string{c.orderingColumn}
-
-	return
 }

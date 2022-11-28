@@ -68,6 +68,12 @@ func (s *Source) Parameters() map[string]sdk.Parameter {
 			Required:    false,
 			Default:     "",
 		},
+		KeySnapshotMode: {
+			Description: "Whether or not the plugin will take a snapshot of the entire table before starting " +
+				"cdc mode (allowed values: initial or never).",
+			Required: false,
+			Default:  "initial",
+		},
 		KeyBatchSize: {
 			Description: "The size of rows batch",
 			Required:    false,
@@ -95,8 +101,8 @@ func (s *Source) Open(ctx context.Context, rp sdk.Position) error {
 		return err
 	}
 
-	s.iterator, err = iterator.NewCombinedIterator(ctx, db, s.config.Connection,
-		s.config.Table, s.config.OrderingColumn, s.config.PrimaryKeys, s.config.Columns, s.config.BatchSize, rp)
+	s.iterator, err = iterator.NewCombinedIterator(ctx, db, s.config.Connection, s.config.Table,
+		s.config.OrderingColumn, s.config.SnapshotMode, s.config.PrimaryKeys, s.config.Columns, s.config.BatchSize, rp)
 	if err != nil {
 		return fmt.Errorf("new iterator: %w", err)
 	}

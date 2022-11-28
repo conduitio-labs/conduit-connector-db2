@@ -62,17 +62,21 @@ and each detected change.
 
 ### Configuration options
 
-| Name             | Description                                                                                                                                                                                                   | Required | Example                                                                 |
-|------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|-------------------------------------------------------------------------|
-| `connection`     | String line for connection to DB2 ([format](https://github.com/ibmdb/go_ibm_db/blob/master/API_DOCUMENTATION.md#-1-opendrivernameconnectionstring)).                                                          | **true** | HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=password |
-| `table`          | The name of a table in the database that the connector should  write to, by default.                                                                                                                          | **true** | users                                                                   |
-| `orderingColumn` | The name of a column that the connector will use for ordering rows. Its values must be unique and suitable for sorting, otherwise, the snapshot won't work correctly.                                         | **true** | id                                                                      |
-| `column`         | Comma separated list of column names that should be included in each Record's payload. If the field is not empty it must contain values of the `primaryKey` and `orderingColumn` fields. By default: all rows | false    | id,name,age                                                             |
-| `primaryKeys`    | Comma separated list of column names that records could use for their `Key` fields. By default connector uses primary keys from table if they are not exist connector will use ordering column.               | false    | id                                                                      |
-| `batchSize`      | Size of rows batch. By default is 1000                                                                                                                                                                        | false    | 100                                                                     |
+| Name                 | Description                                                                                                                                                                                                   | Required | Example                                                                 |
+|----------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|-------------------------------------------------------------------------|
+| `connection`         | String line for connection to DB2 ([format](https://github.com/ibmdb/go_ibm_db/blob/master/API_DOCUMENTATION.md#-1-opendrivernameconnectionstring)).                                                          | **true** | HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=password |
+| `table`              | The name of a table in the database that the connector should  write to, by default.                                                                                                                          | **true** | users                                                                   |
+| `orderingColumn`     | The name of a column that the connector will use for ordering rows. Its values must be unique and suitable for sorting, otherwise, the snapshot won't work correctly.                                         | **true** | id                                                                      |
+| `column`             | Comma separated list of column names that should be included in each Record's payload. If the field is not empty it must contain values of the `primaryKey` and `orderingColumn` fields. By default: all rows | false    | id,name,age                                                             |
+| `primaryKeys`        | Comma separated list of column names that records could use for their `Key` fields. By default connector uses primary keys from table if they are not exist connector will use ordering column.               | false    | id                                                                      |
+| `snapshotMode`       | Whether or not the plugin will take a snapshot of the entire table before starting cdc mode (allowed values: `initial` or `never`).                                                                           | false    | initial                                                                 |
+| `batchSize`          | Size of rows batch. By default is 1000                                                                                                                                                                        | false    | 100                                                                     |
 
 ### Snapshot
-First time when the snapshot iterator starts work, it is get max value from `orderingColumn` and saves this value to position.
+When the connector first starts, snapshot mode is enabled. 
+
+First time when the snapshot iterator starts work, 
+it is get max value from `orderingColumn` and saves this value to position.
 The snapshot iterator reads all rows, where `orderingColumn` values less or equal maxValue, from the table in batches.
 
 
@@ -82,6 +86,8 @@ If snapshot stops it will parse position from last record and will try gets row 
 
 
 When all records are returned, the connector switches to the CDC iterator.
+
+This behavior is enabled by default, but can be turned off by adding "snapshotMode":"never" to the Source configuration.
 
 ### Change Data Capture (CDC)
 

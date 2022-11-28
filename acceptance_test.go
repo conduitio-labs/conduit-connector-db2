@@ -77,6 +77,7 @@ func TestAcceptance(t *testing.T) {
 				SourceConfig:      cfg,
 				DestinationConfig: cfg,
 				BeforeTest:        beforeTest(t, cfg),
+				AfterTest:         afterTest(t, cfg),
 				GoleakOptions: []goleak.Option{
 					// imdb library leak.
 					goleak.IgnoreTopFunction("github.com/ibmdb/go_ibm_db/api._Cfunc_SQLDisconnect"),
@@ -101,37 +102,9 @@ func beforeTest(t *testing.T, cfg map[string]string) func(t *testing.T) {
 	}
 }
 
-func prepareConfig(t *testing.T) map[string]string {
-	conn := os.Getenv("DB2_CONNECTION")
-	if conn == "" {
-		t.Skip("DB2_CONNECTION env var must be set")
-
-		return nil
-	}
-
-	return map[string]string{
-		config.KeyConnection: conn,
-		s.KeyPrimaryKeys:     "ID",
-		s.KeyOrderingColumn:  "ID",
-	}
-}
-
-func prepareData(t *testing.T, cfg map[string]string) error {
-	db, err := sql.Open("go_ibm_db", cfg[config.KeyConnection])
-	if err != nil {
-		return err
-	}
-
-	_, err = db.Exec(fmt.Sprintf(queryCreateTestTable, cfg[config.KeyTable]))
-	if err != nil {
-		return err
-	}
-
-	db.Close()
-
-	// drop table
-	t.Cleanup(func() {
-		db, err = sql.Open("go_ibm_db", cfg[config.KeyConnection])
+func afterTest(t *testing.T, cfg map[string]string) func(t *testing.T) {
+	return func(t *testing.T) {
+		db, err := sql.Open("go_ibm_db", cfg[config.KeyConnection])
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -172,7 +145,36 @@ func prepareData(t *testing.T, cfg map[string]string) error {
 		if err = db.Close(); err != nil {
 			t.Errorf("close database: %v", err)
 		}
-	})
+	}
+}
+
+func prepareConfig(t *testing.T) map[string]string {
+	conn := os.Getenv("DB2_CONNECTION")
+	if conn == "" {
+		t.Skip("DB2_CONNECTION env var must be set")
+
+		return nil
+	}
+
+	return map[string]string{
+		config.KeyConnection: conn,
+		s.KeyPrimaryKeys:     "ID",
+		s.KeyOrderingColumn:  "ID",
+	}
+}
+
+func prepareData(t *testing.T, cfg map[string]string) error {
+	db, err := sql.Open("go_ibm_db", cfg[config.KeyConnection])
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec(fmt.Sprintf(queryCreateTestTable, cfg[config.KeyTable]))
+	if err != nil {
+		return err
+	}
+
+	db.Close()
 
 	return nil
 }

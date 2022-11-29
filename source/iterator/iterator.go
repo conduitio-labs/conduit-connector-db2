@@ -34,13 +34,6 @@ const (
 	columnTrackingID    = "CONDUIT_TRACKING_ID"
 )
 
-const (
-	// SnapshotModeInitial take snapshot from table.
-	SnapshotModeInitial = "initial"
-	// SnapshotModeNever miss snapshot start with cdc.
-	SnapshotModeNever = "never"
-)
-
 // CombinedIterator combined iterator.
 type CombinedIterator struct {
 	cdc      *cdcIterator
@@ -70,9 +63,10 @@ type CombinedIterator struct {
 func NewCombinedIterator(
 	ctx context.Context,
 	db *sqlx.DB,
-	conn, table, orderingColumn, snapshotMode string,
+	conn, table, orderingColumn string,
 	cfgKeys, columns []string,
 	batchSize int,
+	snapshot bool,
 	sdkPosition sdk.Position,
 ) (*CombinedIterator, error) {
 	var err error
@@ -105,7 +99,7 @@ func NewCombinedIterator(
 		return nil, fmt.Errorf("parse position: %w", err)
 	}
 
-	if snapshotMode == SnapshotModeInitial && (pos == nil || pos.IteratorType == position.TypeSnapshot) {
+	if snapshot && (pos == nil || pos.IteratorType == position.TypeSnapshot) {
 		it.snapshot, err = newSnapshotIterator(ctx, db, it.table, orderingColumn, it.keys, columns,
 			batchSize, pos, it.columnTypes)
 		if err != nil {

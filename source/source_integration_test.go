@@ -58,13 +58,13 @@ const (
 `
 	queryInsertCDCData = `
 		INSERT INTO CONDUIT_SOURCE_INTEGRATION_TABLE VALUES 
-		( 1, 'varchar', 'c', 'clob', 'long varchar', 'graphic', 'long vargraphic',
+		( 5, 'varchar', 'c', 'clob', 'long varchar', 'graphic', 'long vargraphic',
 		 'vargraphic', 5455, 2321, 123.12, 123.1223)
 	`
 
 	queryUpdateCDCData = `
 		UPDATE CONDUIT_SOURCE_INTEGRATION_TABLE SET CL1 ='update' 
-		WHERE ID = 1
+		WHERE ID = 5
 	`
 
 	queryDeleteCDCData = `
@@ -356,6 +356,59 @@ func TestSource_CDC_Empty_Table(t *testing.T) {
 	_, err = s.Read(ctx)
 	if err != sdk.ErrBackoffRetry {
 		t.Fatal(err)
+	}
+
+	err = s.Teardown(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestSource_Snapshot_Off(t *testing.T) {
+	ctx := context.Background()
+
+	cfg, err := prepareConfig()
+	if err != nil {
+		t.Skip()
+	}
+
+	// turn off snapshot
+	cfg[KeySnapshot] = "false"
+
+	err = prepareData(ctx, cfg[config.KeyConnection])
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer clearData(ctx, cfg[config.KeyConnection]) // nolint:errcheck,nolintlint
+
+	s := new(Source)
+
+	err = s.Configure(ctx, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Start first time with nil position.
+	err = s.Open(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// load data for cdc.
+	err = prepareCDCData(ctx, cfg[config.KeyConnection])
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Check read. Snapshot data must be missed.
+	r, err := s.Read(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(r.Operation, sdk.OperationCreate) {
+		t.Fatal(errors.New("not wanted type"))
 	}
 
 	err = s.Teardown(ctx)

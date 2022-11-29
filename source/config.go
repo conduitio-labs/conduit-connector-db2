@@ -20,7 +20,6 @@ import (
 	"strings"
 
 	"github.com/conduitio-labs/conduit-connector-db2/config"
-	"github.com/conduitio-labs/conduit-connector-db2/source/iterator"
 	"github.com/conduitio-labs/conduit-connector-db2/validator"
 )
 
@@ -33,8 +32,11 @@ const (
 	KeyBatchSize = "batchSize"
 	// KeyPrimaryKeys is a config name for primary keys.
 	KeyPrimaryKeys = "primaryKeys"
-	// KeySnapshotMode is a config name for snapshotMode.
-	KeySnapshotMode = "snapshotMode"
+	// KeySnapshot is a config name for snapshotMode.
+	KeySnapshot = "snapshot"
+
+	// snapshotDefault is a default value for the Snapshot field.
+	snapshotDefault = true
 
 	// defaultBatchSize is a default value for a BatchSize field.
 	defaultBatchSize = 1000
@@ -52,9 +54,8 @@ type Config struct {
 	BatchSize int `key:"batchSize" validate:"gte=1,lte=100000"`
 	// PrimaryKeys list of column names should use for their `Key` fields.
 	PrimaryKeys []string `validate:"dive,max=128"`
-	// Whether or not the plugin will take a snapshot of the entire table before
-	// starting cdc mode (allowed values: initial or never).
-	SnapshotMode string `validate:"max=8"`
+	// Snapshot whether or not the plugin will take a snapshot of the entire table before starting cdc.
+	Snapshot bool
 }
 
 // Parse maps the incoming map to the Config and validates it.
@@ -68,7 +69,7 @@ func Parse(cfg map[string]string) (Config, error) {
 		Config:         common,
 		OrderingColumn: strings.ToUpper(cfg[KeyOrderingColumn]),
 		BatchSize:      defaultBatchSize,
-		SnapshotMode:   iterator.SnapshotModeInitial,
+		Snapshot:       snapshotDefault,
 	}
 
 	if columns := cfg[KeyColumns]; columns != "" {
@@ -86,13 +87,13 @@ func Parse(cfg map[string]string) (Config, error) {
 		}
 	}
 
-	if snapshotMode := cfg[KeySnapshotMode]; snapshotMode != "" {
-		if !(snapshotMode == iterator.SnapshotModeInitial || snapshotMode == iterator.SnapshotModeNever) {
-			return Config{}, fmt.Errorf("invalid snapshotMode config value, allowed values: %s, %s",
-				iterator.SnapshotModeInitial, iterator.SnapshotModeNever)
+	if cfg[KeySnapshot] != "" {
+		snapshot, err := strconv.ParseBool(cfg[KeySnapshot])
+		if err != nil {
+			return Config{}, fmt.Errorf("parse %q: %w", KeySnapshot, err)
 		}
 
-		sourceConfig.SnapshotMode = snapshotMode
+		sourceConfig.Snapshot = snapshot
 	}
 
 	if err = validator.Validate(&sourceConfig); err != nil {

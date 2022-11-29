@@ -19,7 +19,6 @@ import (
 	"testing"
 
 	"github.com/conduitio-labs/conduit-connector-db2/config"
-	"github.com/conduitio-labs/conduit-connector-db2/source/iterator"
 )
 
 func TestParse(t *testing.T) {
@@ -52,7 +51,7 @@ func TestParse(t *testing.T) {
 				},
 				OrderingColumn: "ID",
 				BatchSize:      defaultBatchSize,
-				SnapshotMode:   iterator.SnapshotModeInitial,
+				Snapshot:       true,
 			},
 			wantErr: false,
 		},
@@ -74,7 +73,7 @@ func TestParse(t *testing.T) {
 				},
 				OrderingColumn: "ID",
 				BatchSize:      50,
-				SnapshotMode:   iterator.SnapshotModeInitial,
+				Snapshot:       true,
 			},
 			wantErr: false,
 		},
@@ -97,7 +96,7 @@ func TestParse(t *testing.T) {
 				OrderingColumn: "ID",
 				BatchSize:      50,
 				Columns:        []string{"ID", "NAME"},
-				SnapshotMode:   iterator.SnapshotModeInitial,
+				Snapshot:       true,
 			},
 			wantErr: false,
 		},
@@ -120,12 +119,12 @@ func TestParse(t *testing.T) {
 				OrderingColumn: "ID",
 				PrimaryKeys:    []string{"ID"},
 				BatchSize:      50,
-				SnapshotMode:   iterator.SnapshotModeInitial,
+				Snapshot:       true,
 			},
 			wantErr: false,
 		},
 		{
-			name: "success, custom snapshotMode",
+			name: "success, custom snapshot",
 			args: args{
 				cfg: map[string]string{
 					config.KeyConnection: "HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=pwd",
@@ -133,7 +132,7 @@ func TestParse(t *testing.T) {
 					KeyOrderingColumn:    "ID",
 					KeyPrimaryKeys:       "id",
 					KeyBatchSize:         "50",
-					KeySnapshotMode:      "never",
+					KeySnapshot:          "false",
 				},
 			},
 			want: Config{
@@ -144,7 +143,7 @@ func TestParse(t *testing.T) {
 				OrderingColumn: "ID",
 				PrimaryKeys:    []string{"ID"},
 				BatchSize:      50,
-				SnapshotMode:   iterator.SnapshotModeNever,
+				Snapshot:       false,
 			},
 			wantErr: false,
 		},
@@ -182,7 +181,7 @@ func TestParse(t *testing.T) {
 					KeyColumns:           "AGE,NAME",
 					KeyBatchSize:         "50",
 					KeyOrderingColumn:    "ID",
-					KeySnapshotMode:      "mode",
+					KeySnapshot:          "mode",
 				},
 			},
 			wantErr: true,

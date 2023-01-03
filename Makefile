@@ -1,4 +1,5 @@
 GOLINT := golangci-lint
+DB2_STARTUP_TIMEOUT ?= 50
 
 .PHONY: build test
 

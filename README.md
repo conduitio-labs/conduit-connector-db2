@@ -9,7 +9,6 @@ It provides both, a source and a destination DB2 connector.
 
 - [Go](https://go.dev/) 1.18
 - (optional) [golangci-lint](https://github.com/golangci/golangci-lint) 1.48.0
-- (optional) [mock](https://github.com/golang/mock) 1.6.0
 
 The Connector uses [go_ibm_db](https://github.com/ibmdb/go_ibm_db) library. This library required to install additional driver
 to work with it. See instructions how to install it on [Windows systems](https://github.com/ibmdb/go_ibm_db#how-to-install-in-windows),
@@ -101,6 +100,9 @@ same columns as the target table plus three additional columns:
 | `CONDUIT_OPERATION_TYPE`        | Operation type: `insert`, `update`, or `delete`.     |
 | `CONDUIT_TRACKING_CREATED_DATE` | Date when the event was added to the tacking table.  |
 
+The connector saves  information about update, delete, insert `table` operations inside tracking table. 
+For example if user inserts new row into `table` connector saves all new columns values inside tracking table  
+with `CONDUIT_OPERATION_TYPE` = `insert`
 
 Triggers have name pattern `CONDUIT_TRIGGER_{{operation_type}}_{{table}}`. 
 

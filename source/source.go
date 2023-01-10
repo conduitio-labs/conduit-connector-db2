@@ -54,12 +54,12 @@ func (s *Source) Parameters() map[string]sdk.Parameter {
 			Default:     "",
 		},
 		KeyPrimaryKeys: {
-			Description: "A names of columns that connector will use for create record key",
+			Description: "Names of columns that connector will use for create record key",
 			Required:    false,
 			Default:     "",
 		},
 		KeyOrderingColumn: {
-			Description: "A name of a column that the connector will use for ordering rows.",
+			Description: "Column used for ordering rows",
 			Required:    true,
 			Default:     "",
 		},

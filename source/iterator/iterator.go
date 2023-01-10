@@ -81,10 +81,12 @@ func NewCombinedIterator(
 	}
 
 	// get column types for converting and get primary keys information
-	it.columnTypes, it.keys, err = coltypes.GetColumnTypes(ctx, db, table)
+	tableInfo, err := coltypes.GetTableInfo(ctx, db, table)
 	if err != nil {
-		return nil, fmt.Errorf("get table column types: %w", err)
+		return nil, fmt.Errorf("get table info: %w", err)
 	}
+
+	it.columnTypes, it.keys = tableInfo.ColumnTypes, tableInfo.PrimaryKeys
 
 	it.setKeys(cfgKeys)
 

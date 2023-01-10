@@ -51,11 +51,11 @@ func NewWriter(ctx context.Context, params Params) (*Writer, error) {
 		table: params.Table,
 	}
 
-	columnTypes, _, err := coltypes.GetColumnTypes(ctx, writer.db, writer.table)
+	tableInfo, err := coltypes.GetTableInfo(ctx, writer.db, writer.table)
 	if err != nil {
 		return nil, fmt.Errorf("get column types: %w", err)
 	}
-	writer.columnTypes = columnTypes
+	writer.columnTypes = tableInfo.ColumnTypes
 
 	return writer, nil
 }

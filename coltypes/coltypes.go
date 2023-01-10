@@ -71,9 +71,17 @@ var (
 		time.RFC3339Nano, time.Kitchen, time.Stamp, time.StampMilli, time.StampMicro, time.StampNano}
 )
 
-// Querier is a database querier interface needed for the GetColumnTypes function.
+// Querier is a database querier interface needed for the GetTableInfo function.
 type Querier interface {
 	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+}
+
+// TableInfo - information about colum types, primary keys from table.
+type TableInfo struct {
+	// ColumnTypes - column name and column type.
+	ColumnTypes map[string]string
+	// PrimaryKeys - primary keys column names.
+	PrimaryKeys []string
 }
 
 // TransformRow converts row map values to appropriate Go types, based on the columnTypes.
@@ -201,12 +209,12 @@ func ConvertStructureData(
 	return result, nil
 }
 
-// GetColumnTypes returns a map containing all table's columns and their database types
+// GetTableInfo returns a map containing all table's columns and their database types
 // and returns primary columns names.
-func GetColumnTypes(ctx context.Context, querier Querier, tableName string) (map[string]string, []string, error) {
+func GetTableInfo(ctx context.Context, querier Querier, tableName string) (TableInfo, error) {
 	rows, err := querier.QueryContext(ctx, fmt.Sprintf(querySchemaColumnTypes, tableName))
 	if err != nil {
-		return nil, nil, fmt.Errorf("query column types: %w", err)
+		return TableInfo{}, fmt.Errorf("query column types: %w", err)
 	}
 
 	columnTypes := make(map[string]string)
@@ -218,7 +226,7 @@ func GetColumnTypes(ctx context.Context, querier Querier, tableName string) (map
 			keyseq               *int
 		)
 		if er := rows.Scan(&columnName, &dataType, &keyseq); er != nil {
-			return nil, nil, fmt.Errorf("scan rows: %w", er)
+			return TableInfo{}, fmt.Errorf("scan rows: %w", er)
 		}
 
 		columnTypes[columnName] = dataType
@@ -229,7 +237,10 @@ func GetColumnTypes(ctx context.Context, querier Querier, tableName string) (map
 		}
 	}
 
-	return columnTypes, primaryKeys, nil
+	return TableInfo{
+		ColumnTypes: columnTypes,
+		PrimaryKeys: primaryKeys,
+	}, nil
 }
 
 func parseTime(val string) (time.Time, error) {

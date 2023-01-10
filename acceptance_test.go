@@ -34,7 +34,7 @@ import (
 const (
 	queryCreateTestTable       = `CREATE TABLE %s (id int, name VARCHAR(100))`
 	queryDropTestTable         = `DROP TABLE %s`
-	queryDropTestTrackingTable = `DROP TABLE CONDUIT_TRACKING_%s`
+	queryDropTestTrackingTable = `DROP TABLE IF EXISTS CONDUIT_TRACKING_%s`
 	queryIfExistTable          = `SELECT count(*) AS count FROM  SysCat.Tables WHERE TabName='CONDUIT_TRACKING_%s'`
 )
 

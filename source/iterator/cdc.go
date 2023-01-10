@@ -49,16 +49,10 @@ type trackingTableService struct {
 }
 
 func newTrackingTableService() *trackingTableService {
-	stopCh := make(chan struct{}, 1)
-	canCloseCh := make(chan struct{}, 1)
-	errCh := make(chan error, 1)
-	trackingIDsForRemoving := make([]any, 0)
-
 	return &trackingTableService{
-		stopCh:         stopCh,
-		errCh:          errCh,
-		idsForRemoving: trackingIDsForRemoving,
-		canCloseCh:     canCloseCh,
+		stopCh:     make(chan struct{}, 1),
+		errCh:      make(chan error, 1),
+		canCloseCh: make(chan struct{}, 1),
 	}
 }
 

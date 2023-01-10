@@ -10,9 +10,10 @@ It provides both, a source and a destination DB2 connector.
 - [Go](https://go.dev/) 1.18
 - (optional) [golangci-lint](https://github.com/golangci/golangci-lint) 1.48.0
 
-The Connector uses [go_ibm_db](https://github.com/ibmdb/go_ibm_db) library. This library required to install additional driver
-to work with it. See instructions how to install it on [Windows systems](https://github.com/ibmdb/go_ibm_db#how-to-install-in-windows),
-[Linux/MAC systems](https://github.com/ibmdb/go_ibm_db#how-to-install-in-linuxmac)
+The Connector uses [go_ibm_db](https://github.com/ibmdb/go_ibm_db) library. This library is required to install the 
+driver to work with. See instructions how to install it on [Windows systems](https://github.com/ibmdb/go_ibm_db#how-to-install-in-windows),
+[Linux/macOS systems](https://github.com/ibmdb/go_ibm_db#how-to-install-in-linuxmac). Also this connector is required enabled
+CGO
 
 #### Go_ibm_db License requirements for connecting to databases
 go_ibm_db driver can connect to DB2 on Linux Unix and Windows without any additional license/s, however, connecting to
@@ -32,8 +33,7 @@ Run `make test` to run all the unit and integration tests.
 
 ## Destination
 
-The DB2 Destination takes a `sdk.Record` and parses it into a valid SQL query. The Destination is designed to
-handle different payloads and keys. Because of this, each record is individually parsed and upserted.
+The DB2 Destination takes a `sdk.Record` and parses it into a valid SQL query.
 
 ### Configuration Options
 
@@ -72,7 +72,8 @@ and each detected change.
 | `batchSize`      | Size of rows batch. By default is 1000.                                                                                                                                                                       | false    | 100                                                                   |
 
 ### Snapshot
-When the connector first starts, snapshot mode is enabled. 
+By default when the connector starts for the first time, snapshot mode is enabled, which means that existing data will 
+be read. To skip reading existing, change config parameter `snapshot` to `false`.
 
 First time when the snapshot iterator starts work, 
 it is get max value from `orderingColumn` and saves this value to position.
@@ -81,12 +82,11 @@ The snapshot iterator reads all rows, where `orderingColumn` values less or equa
 
 Values in the ordering column must be unique and suitable for sorting, otherwise, the snapshot won't work correctly. 
 Iterators saves last processed value from `orderingColumn` column to position to field `SnapshotLastProcessedVal`. 
-If snapshot stops it will parse position from last record and will try gets row where `{{orderingColumn}} > {{position.SnapshotLastProcessedVal}}`
+If snapshot was interrupted on next start connector will parse last recorded position 
+to find next snapshot rows.
 
 
 When all records are returned, the connector switches to the CDC iterator.
-
-This behavior is enabled by default, but can be turned off by adding "snapshot":"false" to the Source configuration.
 
 ### Change Data Capture (CDC)
 
@@ -101,7 +101,7 @@ same columns as the target table plus three additional columns:
 | `CONDUIT_TRACKING_CREATED_DATE` | Date when the event was added to the tacking table.  |
 
 The connector saves  information about update, delete, insert `table` operations inside tracking table. 
-For example if user inserts new row into `table` connector saves all new columns values inside tracking table  
+For example if user inserts new row into `table` connector will save all new columns values inside tracking table  
 with `CONDUIT_OPERATION_TYPE` = `insert`
 
 Triggers have name pattern `CONDUIT_TRIGGER_{{operation_type}}_{{table}}`. 

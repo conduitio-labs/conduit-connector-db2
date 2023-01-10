@@ -125,7 +125,7 @@ func (s *Source) Open(ctx context.Context, rp sdk.Position) error {
 func (s *Source) Read(ctx context.Context) (sdk.Record, error) {
 	hasNext, err := s.iterator.HasNext(ctx)
 	if err != nil {
-		return sdk.Record{}, fmt.Errorf("has next: %w", err)
+		return sdk.Record{}, fmt.Errorf("source has next: %w", err)
 	}
 
 	if !hasNext {
@@ -134,7 +134,7 @@ func (s *Source) Read(ctx context.Context) (sdk.Record, error) {
 
 	r, err := s.iterator.Next(ctx)
 	if err != nil {
-		return sdk.Record{}, fmt.Errorf("next: %w", err)
+		return sdk.Record{}, fmt.Errorf("source next: %w", err)
 	}
 
 	return r, nil

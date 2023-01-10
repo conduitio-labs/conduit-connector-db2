@@ -30,7 +30,7 @@ import (
 
 // snapshotIterator - iterator which get snapshot data.
 // A "snapshot" is the state of a table data at a particular point in time when connector starts work.
-// First time when the snapshot iterator starts work, it is get max value from `orderingColumn` and saves
+// The first time when the snapshot iterator starts work, it is gets max value from `orderingColumn` and saves
 // this value to position.
 // The snapshot iterator reads all rows, where `orderingColumn` values less or equal maxValue,
 // from the table in batches.
@@ -51,7 +51,7 @@ type snapshotIterator struct {
 	keys []string
 	// orderingColumn Name of column what iterator using for sorting data.
 	orderingColumn string
-	// maxValue from ordering column.
+	// maxValue max value from ordering column. Connector uses this variable like boundary value for snapshot.
 	maxValue any
 	// batchSize size of batch.
 	batchSize int

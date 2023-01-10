@@ -20,7 +20,6 @@ import (
 	"errors"
 	"reflect"
 	"testing"
-	"time"
 
 	sdk "github.com/conduitio/conduit-connector-sdk"
 	"github.com/golang/mock/gomock"
@@ -107,7 +106,6 @@ func TestSource_Read(t *testing.T) {
 			IteratorType:             position.TypeSnapshot,
 			SnapshotLastProcessedVal: "1",
 			CDCLastID:                0,
-			Time:                     time.Now(),
 		})
 
 		record := sdk.Record{

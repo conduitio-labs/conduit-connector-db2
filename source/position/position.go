@@ -17,7 +17,6 @@ package position
 import (
 	"encoding/json"
 	"fmt"
-	"time"
 
 	sdk "github.com/conduitio/conduit-connector-sdk"
 )
@@ -44,9 +43,6 @@ type Position struct {
 	// CDC information.
 	// CDCID - last processed id from tracking table.
 	CDCLastID int
-
-	// Time Created time.
-	Time time.Time
 }
 
 // ParseSDKPosition parses SDK position and returns Position.

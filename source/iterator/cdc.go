@@ -169,7 +169,6 @@ func (i *cdcIterator) Next(ctx context.Context) (sdk.Record, error) {
 	pos := position.Position{
 		IteratorType: position.TypeCDC,
 		CDCLastID:    int(id),
-		Time:         time.Now(),
 	}
 
 	convertedPosition, err := pos.ConvertToSDKPosition()

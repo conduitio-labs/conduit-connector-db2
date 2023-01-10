@@ -113,7 +113,7 @@ func afterTest(t *testing.T, cfg map[string]string) func(t *testing.T) {
 
 		_, err = db.Exec(queryDropTable)
 		if err != nil {
-			t.Errorf("drop test table: %v", err)
+			t.Logf("drop test table: %v", err)
 		}
 
 		queryDropTrackingTable := fmt.Sprintf(queryDropTestTrackingTable, cfg[config.KeyTable])

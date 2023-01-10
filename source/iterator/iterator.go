@@ -118,6 +118,10 @@ func NewCombinedIterator(
 
 // SetupCDC - create tracking table, add columns, add triggers, set identity column.
 func (c *CombinedIterator) SetupCDC(ctx context.Context, db *sqlx.DB) error {
+	var (
+		trackingTableExist bool
+	)
+
 	tx, err := db.Begin()
 	if err != nil {
 		return fmt.Errorf("create transaction: %w", err)
@@ -141,46 +145,47 @@ func (c *CombinedIterator) SetupCDC(ctx context.Context, db *sqlx.DB) error {
 		}
 
 		if count == 1 {
-			// table exist, setup not needed.
-			return nil
+			trackingTableExist = true
 		}
 	}
 
-	// create tracking table with all columns from `table`
-	_, err = tx.ExecContext(ctx, fmt.Sprintf(queryCreateTable, c.trackingTable, c.table))
-	if err != nil {
-		return fmt.Errorf("create tracking table: %w", err)
-	}
+	if !trackingTableExist {
+		// create tracking table with all columns from `table`
+		_, err = tx.ExecContext(ctx, fmt.Sprintf(queryCreateTable, c.trackingTable, c.table))
+		if err != nil {
+			return fmt.Errorf("create tracking table: %w", err)
+		}
 
-	// add columns to tracking table.
-	_, err = tx.ExecContext(ctx, fmt.Sprintf(queryAddColumns, c.trackingTable, columnOperationType,
-		columnTimeCreated, columnTrackingID))
-	if err != nil {
-		return fmt.Errorf("add columns: %w", err)
-	}
+		// add columns to tracking table.
+		_, err = tx.ExecContext(ctx, fmt.Sprintf(queryAddColumns, c.trackingTable, columnOperationType,
+			columnTimeCreated, columnTrackingID))
+		if err != nil {
+			return fmt.Errorf("add columns: %w", err)
+		}
 
-	// set not null for tracking id column.
-	_, err = tx.ExecContext(ctx, fmt.Sprintf(querySetNotNull, c.trackingTable, columnTrackingID))
-	if err != nil {
-		return fmt.Errorf("set not null: %w", err)
-	}
+		// set not null for tracking id column.
+		_, err = tx.ExecContext(ctx, fmt.Sprintf(querySetNotNull, c.trackingTable, columnTrackingID))
+		if err != nil {
+			return fmt.Errorf("set not null: %w", err)
+		}
 
-	// generate identity for tracking id column.
-	_, err = tx.ExecContext(ctx, fmt.Sprintf(querySetGeneratedIdentity, c.trackingTable, columnTrackingID))
-	if err != nil {
-		return fmt.Errorf("generate identity: %w", err)
-	}
+		// generate identity for tracking id column.
+		_, err = tx.ExecContext(ctx, fmt.Sprintf(querySetGeneratedIdentity, c.trackingTable, columnTrackingID))
+		if err != nil {
+			return fmt.Errorf("generate identity: %w", err)
+		}
 
-	// reorg table.
-	_, err = tx.ExecContext(ctx, fmt.Sprintf(queryReorgTable, c.trackingTable))
-	if err != nil {
-		return fmt.Errorf("reorganize table: %w", err)
-	}
+		// reorg table.
+		_, err = tx.ExecContext(ctx, fmt.Sprintf(queryReorgTable, c.trackingTable))
+		if err != nil {
+			return fmt.Errorf("reorganize table: %w", err)
+		}
 
-	// add index.
-	_, err = tx.ExecContext(ctx, fmt.Sprintf(queryAddIndex, c.table, c.trackingTable, columnTrackingID))
-	if err != nil {
-		return fmt.Errorf("add index: %w", err)
+		// add index.
+		_, err = tx.ExecContext(ctx, fmt.Sprintf(queryAddIndex, c.table, c.trackingTable, columnTrackingID))
+		if err != nil {
+			return fmt.Errorf("add index: %w", err)
+		}
 	}
 
 	triggersQuery := buildTriggers(c.trackingTable, c.table, c.columnTypes)

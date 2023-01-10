@@ -137,9 +137,6 @@ ALTER TABLE CONDUIT_TRACKING_CLIENTS
 
 You have to restart pipeline, tracking table will be recreated by connector.
 
-#### I accidentally removed table.
-
-You have to stop the pipeline, remove the conduit tracking table, and then start the pipeline.
 
 #### Is it possible to change table name?
 

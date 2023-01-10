@@ -90,7 +90,7 @@ func TestSource_Snapshot_Success(t *testing.T) {
 
 	defer clearData(ctx, cfg[config.KeyConnection]) // nolint:errcheck,nolintlint
 
-	s := new(Source)
+	s := New()
 
 	err = s.Configure(ctx, cfg)
 	if err != nil {
@@ -139,7 +139,7 @@ func TestSource_Snapshot_Continue(t *testing.T) {
 
 	defer clearData(ctx, cfg[config.KeyConnection]) // nolint:errcheck,nolintlint
 
-	s := new(Source)
+	s := New()
 
 	err = s.Configure(ctx, cfg)
 	if err != nil {
@@ -208,7 +208,7 @@ func TestSource_Snapshot_Empty_Table(t *testing.T) {
 
 	defer clearData(ctx, cfg[config.KeyConnection]) // nolint:errcheck,nolintlint
 
-	s := new(Source)
+	s := New()
 
 	err = s.Configure(ctx, cfg)
 	if err != nil {
@@ -248,7 +248,7 @@ func TestSource_CDC(t *testing.T) {
 
 	defer clearData(ctx, cfg[config.KeyConnection]) // nolint:errcheck,nolintlint
 
-	s := new(Source)
+	s := New()
 
 	err = s.Configure(ctx, cfg)
 	if err != nil {
@@ -334,7 +334,7 @@ func TestSource_CDC_Empty_Table(t *testing.T) {
 
 	defer clearData(ctx, cfg[config.KeyConnection]) // nolint:errcheck,nolintlint
 
-	s := new(Source)
+	s := New()
 
 	err = s.Configure(ctx, cfg)
 	if err != nil {
@@ -382,7 +382,7 @@ func TestSource_Snapshot_Off(t *testing.T) {
 
 	defer clearData(ctx, cfg[config.KeyConnection]) // nolint:errcheck,nolintlint
 
-	s := new(Source)
+	s := New()
 
 	err = s.Configure(ctx, cfg)
 	if err != nil {

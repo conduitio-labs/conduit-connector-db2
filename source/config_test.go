@@ -28,10 +28,11 @@ func TestParse(t *testing.T) {
 		cfg map[string]string
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    Config
-		wantErr bool
+		name        string
+		args        args
+		want        Config
+		wantErr     bool
+		expectedErr string
 	}{
 		{
 			name: "success, required and default fields",
@@ -157,7 +158,8 @@ func TestParse(t *testing.T) {
 					KeyBatchSize:         "50",
 				},
 			},
-			wantErr: true,
+			wantErr:     true,
+			expectedErr: `validate source config: "orderingColumn" value must be set; "columns" value must contains values of these fields: "OrderingColumn"`, //nolint:lll // for test purpose
 		},
 		{
 			name: "failed, missed ordering column in custom columns",
@@ -170,7 +172,8 @@ func TestParse(t *testing.T) {
 					KeyOrderingColumn:    "ID",
 				},
 			},
-			wantErr: true,
+			wantErr:     true,
+			expectedErr: `validate source config: "columns" value must contains values of these fields: "OrderingColumn"`,
 		},
 		{
 			name: "failed, invalid snapshot mode",
@@ -184,7 +187,8 @@ func TestParse(t *testing.T) {
 					KeySnapshot:          "mode",
 				},
 			},
-			wantErr: true,
+			wantErr:     true,
+			expectedErr: `parse "snapshot": strconv.ParseBool: parsing "mode": invalid syntax`,
 		},
 	}
 
@@ -195,14 +199,24 @@ func TestParse(t *testing.T) {
 			t.Parallel()
 
 			got, err := Parse(tt.args.cfg)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Parse() error = %v, wantErr %v", err, tt.wantErr)
+			if err != nil {
+				if !tt.wantErr {
+					t.Errorf("parse error = \"%s\", wantErr %t", err.Error(), tt.wantErr)
+
+					return
+				}
+
+				if err.Error() != tt.expectedErr {
+					t.Errorf("expected error \"%s\", got \"%s\"", tt.expectedErr, err.Error())
+
+					return
+				}
 
 				return
 			}
 
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Parse() = %v, want %v", got, tt.want)
+				t.Errorf("parse = %v, want %v", got, tt.want)
 			}
 		})
 	}

@@ -59,56 +59,61 @@ type CombinedIterator struct {
 	columnTypes map[string]string
 }
 
+// CombinedParams is an incoming params for the [NewCombinedIterator] function.
+type CombinedParams struct {
+	DB             *sqlx.DB
+	Conn           string
+	Table          string
+	OrderingColumn string
+	CfgKeys        []string
+	Columns        []string
+	BatchSize      int
+	Snapshot       bool
+	SdkPosition    sdk.Position
+}
+
 // NewCombinedIterator - create new iterator.
-func NewCombinedIterator(
-	ctx context.Context,
-	db *sqlx.DB,
-	conn, table, orderingColumn string,
-	cfgKeys, columns []string,
-	batchSize int,
-	snapshot bool,
-	sdkPosition sdk.Position,
-) (*CombinedIterator, error) {
+func NewCombinedIterator(ctx context.Context, params CombinedParams) (*CombinedIterator, error) {
 	var err error
 
 	it := &CombinedIterator{
-		conn:           conn,
-		table:          table,
-		columns:        columns,
-		orderingColumn: orderingColumn,
-		batchSize:      batchSize,
-		trackingTable:  fmt.Sprintf(trackingTablePattern, table),
+		conn:           params.Conn,
+		table:          params.Table,
+		columns:        params.Columns,
+		orderingColumn: params.OrderingColumn,
+		batchSize:      params.BatchSize,
+		trackingTable:  fmt.Sprintf(trackingTablePattern, params.Table),
 	}
 
 	// get column types for converting and get primary keys information
-	tableInfo, err := coltypes.GetTableInfo(ctx, db, table)
+	tableInfo, err := coltypes.GetTableInfo(ctx, params.DB, params.Table)
 	if err != nil {
 		return nil, fmt.Errorf("get table info: %w", err)
 	}
 
 	it.columnTypes, it.keys = tableInfo.ColumnTypes, tableInfo.PrimaryKeys
 
-	it.setKeys(cfgKeys)
+	it.setKeys(params.CfgKeys)
 
 	// create tracking table, create triggers for cdc logic.
-	err = it.SetupCDC(ctx, db)
+	err = it.SetupCDC(ctx, params.DB)
 	if err != nil {
 		return nil, fmt.Errorf("setup cdc: %w", err)
 	}
 
-	pos, err := position.ParseSDKPosition(sdkPosition)
+	pos, err := position.ParseSDKPosition(params.SdkPosition)
 	if err != nil {
 		return nil, fmt.Errorf("parse position: %w", err)
 	}
 
-	if snapshot && (pos == nil || pos.IteratorType == position.TypeSnapshot) {
-		it.snapshot, err = newSnapshotIterator(ctx, db, it.table, orderingColumn, it.keys, columns,
-			batchSize, pos, it.columnTypes)
+	if params.Snapshot && (pos == nil || pos.IteratorType == position.TypeSnapshot) {
+		it.snapshot, err = newSnapshotIterator(ctx, params.DB, it.table, params.OrderingColumn, it.keys, params.Columns,
+			params.BatchSize, pos, it.columnTypes)
 		if err != nil {
 			return nil, fmt.Errorf("new shapshot iterator: %w", err)
 		}
 	} else {
-		it.cdc, err = newCDCIterator(ctx, db, it.table, it.trackingTable, it.keys,
+		it.cdc, err = newCDCIterator(ctx, params.DB, it.table, it.trackingTable, it.keys,
 			it.columns, it.batchSize, it.columnTypes, pos)
 		if err != nil {
 			return nil, fmt.Errorf("new shapshot iterator: %w", err)

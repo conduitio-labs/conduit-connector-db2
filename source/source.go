@@ -100,8 +100,20 @@ func (s *Source) Open(ctx context.Context, rp sdk.Position) error {
 		return err
 	}
 
-	s.iterator, err = iterator.NewCombinedIterator(ctx, db, s.config.Connection, s.config.Table,
-		s.config.OrderingColumn, s.config.PrimaryKeys, s.config.Columns, s.config.BatchSize, s.config.Snapshot, rp)
+	s.iterator, err = iterator.NewCombinedIterator(
+		ctx,
+		iterator.CombinedParams{
+			DB:             db,
+			Conn:           s.config.Connection,
+			Table:          s.config.Table,
+			OrderingColumn: s.config.OrderingColumn,
+			CfgKeys:        s.config.PrimaryKeys,
+			Columns:        s.config.Columns,
+			BatchSize:      s.config.BatchSize,
+			Snapshot:       s.config.Snapshot,
+			SdkPosition:    rp,
+		},
+	)
 	if err != nil {
 		return fmt.Errorf("new iterator: %w", err)
 	}

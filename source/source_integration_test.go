@@ -71,8 +71,8 @@ const (
 		DELETE FROM CONDUIT_SOURCE_INTEGRATION_TABLE
 	`
 
-	queryDropTable         = `DROP TABLE CONDUIT_SOURCE_INTEGRATION_TABLE`
-	queryDropTrackingTable = `DROP TABLE CONDUIT_TRACKING_CONDUIT_SOURCE_INTEGRATION_TABLE`
+	queryDropTable         = `DROP TABLE IF EXISTS CONDUIT_SOURCE_INTEGRATION_TABLE`
+	queryDropTrackingTable = `DROP TABLE IF EXISTS CONDUIT_TRACKING_CONDUIT_SOURCE_INTEGRATION_TABLE`
 )
 
 func TestSource_Snapshot_Success(t *testing.T) {
@@ -440,6 +440,16 @@ func prepareData(ctx context.Context, conn string) error {
 	defer db.Close()
 
 	err = db.PingContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec(queryDropTable)
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec(queryDropTrackingTable)
 	if err != nil {
 		return err
 	}

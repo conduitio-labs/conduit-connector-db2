@@ -55,8 +55,8 @@ type CombinedIterator struct {
 	orderingColumn string
 	// batchSize size of batch.
 	batchSize int
-	// columnTypes column types from table.
-	columnTypes map[string]string
+	// info about table
+	tableInfo coltypes.TableInfo
 }
 
 // CombinedParams is an incoming params for the [NewCombinedIterator] function.
@@ -86,17 +86,15 @@ func NewCombinedIterator(ctx context.Context, params CombinedParams) (*CombinedI
 	}
 
 	// get column types for converting and get primary keys information
-	tableInfo, err := coltypes.GetTableInfo(ctx, params.DB, params.Table)
+	it.tableInfo, err = coltypes.GetTableInfo(ctx, params.DB, params.Table)
 	if err != nil {
 		return nil, fmt.Errorf("get table info: %w", err)
 	}
 
-	it.columnTypes, it.keys = tableInfo.ColumnTypes, tableInfo.PrimaryKeys
-
 	it.setKeys(params.CfgKeys)
 
 	// create tracking table, create triggers for cdc logic.
-	err = it.SetupCDC(ctx, params.DB)
+	err = setupCDC(ctx, params.DB, it.table, it.trackingTable, it.tableInfo)
 	if err != nil {
 		return nil, fmt.Errorf("setup cdc: %w", err)
 	}
@@ -108,119 +106,19 @@ func NewCombinedIterator(ctx context.Context, params CombinedParams) (*CombinedI
 
 	if params.Snapshot && (pos == nil || pos.IteratorType == position.TypeSnapshot) {
 		it.snapshot, err = newSnapshotIterator(ctx, params.DB, it.table, params.OrderingColumn, it.keys, params.Columns,
-			params.BatchSize, pos, it.columnTypes)
+			params.BatchSize, pos, it.tableInfo.ColumnTypes)
 		if err != nil {
 			return nil, fmt.Errorf("new shapshot iterator: %w", err)
 		}
 	} else {
 		it.cdc, err = newCDCIterator(ctx, params.DB, it.table, it.trackingTable, it.keys,
-			it.columns, it.batchSize, it.columnTypes, pos)
+			it.columns, it.batchSize, it.tableInfo.ColumnTypes, pos)
 		if err != nil {
 			return nil, fmt.Errorf("new shapshot iterator: %w", err)
 		}
 	}
 
 	return it, nil
-}
-
-// SetupCDC - create tracking table, add columns, add triggers, set identity column.
-func (c *CombinedIterator) SetupCDC(ctx context.Context, db *sqlx.DB) error {
-	var (
-		trackingTableExist bool
-	)
-
-	tx, err := db.Begin()
-	if err != nil {
-		return fmt.Errorf("create transaction: %w", err)
-	}
-
-	defer tx.Rollback() // nolint:errcheck,nolintlint
-
-	// check if table exist.
-	rows, err := tx.QueryContext(ctx, fmt.Sprintf(queryIfExistTable, c.trackingTable))
-	if err != nil {
-		return fmt.Errorf("query exist table: %w", err)
-	}
-
-	defer rows.Close() //nolint:staticcheck,nolintlint
-
-	for rows.Next() {
-		var count int
-		er := rows.Scan(&count)
-		if er != nil {
-			return fmt.Errorf("scan: %w", err)
-		}
-
-		if count == 1 {
-			trackingTableExist = true
-		}
-	}
-
-	if !trackingTableExist {
-		// create tracking table with all columns from `table`
-		_, err = tx.ExecContext(ctx, fmt.Sprintf(queryCreateTable, c.trackingTable, c.table))
-		if err != nil {
-			return fmt.Errorf("create tracking table: %w", err)
-		}
-
-		// add columns to tracking table.
-		_, err = tx.ExecContext(ctx, fmt.Sprintf(queryAddColumns, c.trackingTable, columnOperationType,
-			columnTimeCreated, columnTrackingID))
-		if err != nil {
-			return fmt.Errorf("add columns: %w", err)
-		}
-
-		// set not null for tracking id column.
-		_, err = tx.ExecContext(ctx, fmt.Sprintf(querySetNotNull, c.trackingTable, columnTrackingID))
-		if err != nil {
-			return fmt.Errorf("set not null: %w", err)
-		}
-
-		// generate identity for tracking id column.
-		_, err = tx.ExecContext(ctx, fmt.Sprintf(querySetGeneratedIdentity, c.trackingTable, columnTrackingID))
-		if err != nil {
-			return fmt.Errorf("generate identity: %w", err)
-		}
-
-		// reorg table.
-		_, err = tx.ExecContext(ctx, fmt.Sprintf(queryReorgTable, c.trackingTable))
-		if err != nil {
-			return fmt.Errorf("reorganize table: %w", err)
-		}
-
-		// add index.
-		_, err = tx.ExecContext(ctx, fmt.Sprintf(queryAddIndex, c.table, c.trackingTable, columnTrackingID))
-		if err != nil {
-			return fmt.Errorf("add index: %w", err)
-		}
-	}
-
-	triggersQuery := buildTriggers(c.trackingTable, c.table, c.columnTypes)
-
-	// add trigger to catch insert.
-	_, err = tx.ExecContext(ctx, triggersQuery.queryTriggerCatchInsert)
-	if err != nil {
-		return fmt.Errorf("add trigger catch insert: %w", err)
-	}
-
-	// add trigger to catch update.
-	_, err = tx.ExecContext(ctx, triggersQuery.queryTriggerCatchUpdate)
-	if err != nil {
-		return fmt.Errorf("add trigger catch update: %w", err)
-	}
-
-	// add trigger to catch delete.
-	_, err = tx.ExecContext(ctx, triggersQuery.queryTriggerCatchDelete)
-	if err != nil {
-		return fmt.Errorf("add trigger catch delete: %w", err)
-	}
-
-	err = tx.Commit()
-	if err != nil {
-		return fmt.Errorf("commit transaction: %w", err)
-	}
-
-	return nil
 }
 
 // HasNext returns a bool indicating whether the iterator has the next record to return or not.
@@ -308,7 +206,7 @@ func (c *CombinedIterator) switchToCDCIterator(ctx context.Context) error {
 	}
 
 	c.cdc, err = newCDCIterator(ctx, db, c.table, c.trackingTable, c.keys,
-		c.columns, c.batchSize, c.columnTypes, nil)
+		c.columns, c.batchSize, c.tableInfo.ColumnTypes, nil)
 	if err != nil {
 		return fmt.Errorf("new cdc iterator: %w", err)
 	}

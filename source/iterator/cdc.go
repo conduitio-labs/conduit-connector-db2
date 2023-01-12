@@ -361,3 +361,78 @@ func (i *cdcIterator) clearTrackingTable(ctx context.Context) {
 		}
 	}
 }
+
+// setupCDC - create tracking table, add columns.
+func setupCDC(
+	ctx context.Context,
+	db *sqlx.DB,
+	tableName, trackingTableName string,
+	tableInfo coltypes.TableInfo,
+) error {
+	var (
+		trackingTableExist bool
+	)
+
+	tx, err := db.Begin()
+	if err != nil {
+		return fmt.Errorf("create transaction: %w", err)
+	}
+
+	defer tx.Rollback() // nolint:errcheck,nolintlint
+
+	// check if table exist.
+	rows, err := tx.QueryContext(ctx, fmt.Sprintf(queryIfExistTable, trackingTableName))
+	if err != nil {
+		return fmt.Errorf("query exist table: %w", err)
+	}
+
+	defer rows.Close() //nolint:staticcheck,nolintlint
+
+	for rows.Next() {
+		var count int
+		er := rows.Scan(&count)
+		if er != nil {
+			return fmt.Errorf("scan: %w", err)
+		}
+
+		if count == 1 {
+			trackingTableExist = true
+		}
+	}
+
+	if !trackingTableExist {
+		// create tracking table
+		_, err = tx.ExecContext(ctx, fmt.Sprintf(queryCreateTable, trackingTableName, tableInfo.GetCreateColumnStr(),
+			columnOperationType, columnTimeCreated, columnTrackingID))
+		if err != nil {
+			return fmt.Errorf("create tracking table: %w", err)
+		}
+	}
+
+	triggersQuery := buildTriggers(trackingTableName, tableName, tableInfo.ColumnTypes)
+
+	// add trigger to catch insert.
+	_, err = tx.ExecContext(ctx, triggersQuery.queryTriggerCatchInsert)
+	if err != nil {
+		return fmt.Errorf("add trigger catch insert: %w", err)
+	}
+
+	// add trigger to catch update.
+	_, err = tx.ExecContext(ctx, triggersQuery.queryTriggerCatchUpdate)
+	if err != nil {
+		return fmt.Errorf("add trigger catch update: %w", err)
+	}
+
+	// add trigger to catch delete.
+	_, err = tx.ExecContext(ctx, triggersQuery.queryTriggerCatchDelete)
+	if err != nil {
+		return fmt.Errorf("add trigger catch delete: %w", err)
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return fmt.Errorf("commit transaction: %w", err)
+	}
+
+	return nil
+}

@@ -41,17 +41,18 @@ const (
 	longVarGraphicType = "LONG VARGRAPHIC"
 	varGraphicType     = "VARGRAPHIC"
 	decimalType        = "DECIMAL"
-	decimalFloat       = "DECFLOAT"
+	decimalFloatType   = "DECFLOAT"
+	dbClobType         = "DBCLOB"
 
 	// Time types.
-	date      = "DATE"
+	dateType  = "DATE"
 	timeType  = "TIME"
 	timeStamp = "TIMESTAMP"
 
 	// Binary types.
-	binary    = "BINARY"
-	varbinary = "VARBINARY"
-	blob      = "BLOB"
+	binaryType    = "BINARY"
+	varbinaryType = "VARBINARY"
+	blobType      = "BLOB"
 )
 
 var (
@@ -59,8 +60,9 @@ var (
 	// their data and column types from the information_schema.
 	querySchemaColumnTypes = `
 			SELECT 
-				   colname as column_name,
-				   typename as data_type,
+				   colname AS column_name,
+				   typename AS data_type,
+				   length,			   
 				   keyseq 
 			FROM syscat.columns
 			WHERE tabname = '%s'
@@ -69,6 +71,10 @@ var (
 	layouts = []string{time.RFC3339, time.RFC3339Nano, time.Layout, time.ANSIC, time.UnixDate, time.RubyDate,
 		time.RFC822, time.RFC822Z, time.RFC850, time.RFC1123, time.RFC1123Z, time.RFC3339, time.RFC3339,
 		time.RFC3339Nano, time.Kitchen, time.Stamp, time.StampMilli, time.StampMicro, time.StampNano}
+
+	// column types where length is required parameter.
+	typesWithLength = []string{charType, varcharType, clobType, graphicType, varGraphicType, dbClobType,
+		binaryType, varbinaryType, blobType}
 )
 
 // Querier is a database querier interface needed for the GetTableInfo function.
@@ -78,10 +84,36 @@ type Querier interface {
 
 // TableInfo - information about colum types, primary keys from table.
 type TableInfo struct {
-	// ColumnTypes - column name and column type.
+	// ColumnTypes - column name with column type.
 	ColumnTypes map[string]string
+	// ColumnLengths - column name with length
+	ColumnLengths map[string]int
 	// PrimaryKeys - primary keys column names.
 	PrimaryKeys []string
+}
+
+func (t TableInfo) GetCreateColumnStr() string {
+	var columns []string
+	for key, val := range t.ColumnTypes {
+		cl := fmt.Sprintf("%s %s", key, val)
+		if isTypeWithRequiredLength(val) {
+			cl = fmt.Sprintf("%s(%d)", cl, t.ColumnLengths[key])
+		}
+
+		columns = append(columns, cl)
+	}
+
+	return strings.Join(columns, ",")
+}
+
+func isTypeWithRequiredLength(elem string) bool {
+	for _, val := range typesWithLength {
+		if val == elem {
+			return true
+		}
+	}
+
+	return false
 }
 
 // TransformRow converts row map values to appropriate Go types, based on the columnTypes.
@@ -98,7 +130,7 @@ func TransformRow(ctx context.Context, row map[string]any, columnTypes map[strin
 		switch columnTypes[key] {
 		// Convert to string.
 		case charType, clobType, longVarcharType, graphicType, longVarGraphicType,
-			varcharType, varGraphicType, decimalType, decimalFloat:
+			varcharType, varGraphicType, decimalType, decimalFloatType:
 			valueBytes, ok := value.([]byte)
 			if !ok {
 				return nil, convertValueToBytesErr(key)
@@ -145,7 +177,7 @@ func ConvertStructureData(
 
 		// Converting value to time if it is string.
 		switch columnTypes[strings.ToUpper(key)] {
-		case date, timeType, timeStamp:
+		case dateType, timeType, timeStamp:
 			_, ok := value.(time.Time)
 			if ok {
 				result[key] = value
@@ -165,7 +197,7 @@ func ConvertStructureData(
 
 			result[key] = timeValue
 		// DecimalFloat must be a number.
-		case decimalFloat:
+		case decimalFloatType:
 			switch v := value.(type) {
 			case float64:
 				result[key] = v
@@ -186,7 +218,7 @@ func ConvertStructureData(
 				return nil, ErrConvertDecFloat
 			}
 
-		case binary, varbinary, blob:
+		case binaryType, varbinaryType, blobType:
 			_, ok := value.([]byte)
 			if ok {
 				result[key] = value
@@ -218,18 +250,21 @@ func GetTableInfo(ctx context.Context, querier Querier, tableName string) (Table
 	}
 
 	columnTypes := make(map[string]string)
+	columnLengths := make(map[string]int)
 	primaryKeys := make([]string, 0)
 
 	for rows.Next() {
 		var (
 			columnName, dataType string
+			length               int
 			keyseq               *int
 		)
-		if er := rows.Scan(&columnName, &dataType, &keyseq); er != nil {
+		if er := rows.Scan(&columnName, &dataType, &length, &keyseq); er != nil {
 			return TableInfo{}, fmt.Errorf("scan rows: %w", er)
 		}
 
 		columnTypes[columnName] = dataType
+		columnLengths[columnName] = length
 
 		// check is it primary key.
 		if keyseq != nil && *keyseq == 1 {
@@ -238,8 +273,9 @@ func GetTableInfo(ctx context.Context, querier Querier, tableName string) (Table
 	}
 
 	return TableInfo{
-		ColumnTypes: columnTypes,
-		PrimaryKeys: primaryKeys,
+		ColumnTypes:   columnTypes,
+		PrimaryKeys:   primaryKeys,
+		ColumnLengths: columnLengths,
 	}, nil
 }
 

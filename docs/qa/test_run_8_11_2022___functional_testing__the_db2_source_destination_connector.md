@@ -1,3 +1,9 @@
+**Test Run 8/11/2022 - Functional testing the DB2 Source/Destination connector**
+
+**branch:** https://github.com/conduitio-labs/conduit-connector-db2/tree/develop
+
+**commit** 8843f7ff1b306f57472a6e68e1e30e6e8442af02
+
 | ID       | Title                                                                                                                                                                                                                                                     | Status | Comment |
 | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ------- |
 | T2757148 | \----------------Required config------------------                                                                                                                                                                                                        | Passed |         |

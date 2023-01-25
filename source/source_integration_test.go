@@ -18,9 +18,12 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
+	"time"
 
 	sdk "github.com/conduitio/conduit-connector-sdk"
 
@@ -28,10 +31,9 @@ import (
 )
 
 const (
-	table            = "CONDUIT_SOURCE_INTEGRATION_TABLE"
 	queryCreateTable = `
-	CREATE TABLE CONDUIT_SOURCE_INTEGRATION_TABLE (
-		id int NOT NULL PRIMARY KEY,
+	CREATE TABLE %s (
+		id INT NOT NULL PRIMARY KEY,
 		cl1 VARCHAR(15),
 		cl2 CHAR,
 		cl3 CLOB,
@@ -46,7 +48,7 @@ const (
 )
 	`
 	queryInsertTestData = `
-		INSERT INTO CONDUIT_SOURCE_INTEGRATION_TABLE VALUES 
+		INSERT INTO %s VALUES 
 		( 1, 'varchar', 'c', 'clob', 'long varchar', 'graphic', 'long vargraphic',
 		 'vargraphic', 5455, 2321, 123.12, 123.1223),
 		( 2, 'varchar', 'c', 'clob', 'long varchar', 'graphic', 'long vargraphic', 
@@ -57,38 +59,42 @@ const (
 		 'vargraphic', 5455, 2321, 123.12, 123.1223)
 `
 	queryInsertCDCData = `
-		INSERT INTO CONDUIT_SOURCE_INTEGRATION_TABLE VALUES 
+		INSERT INTO %s VALUES 
 		( 5, 'varchar', 'c', 'clob', 'long varchar', 'graphic', 'long vargraphic',
 		 'vargraphic', 5455, 2321, 123.12, 123.1223)
 	`
 
 	queryUpdateCDCData = `
-		UPDATE CONDUIT_SOURCE_INTEGRATION_TABLE SET CL1 ='update' 
+		UPDATE %s SET CL1 ='update' 
 		WHERE ID = 5
 	`
 
 	queryDeleteCDCData = `
-		DELETE FROM CONDUIT_SOURCE_INTEGRATION_TABLE
+		DELETE FROM %s
 	`
 
-	queryDropTable         = `DROP TABLE IF EXISTS CONDUIT_SOURCE_INTEGRATION_TABLE`
-	queryDropTrackingTable = `DROP TABLE IF EXISTS CONDUIT_TRACKING_CONDUIT_SOURCE_INTEGRATION_TABLE`
+	queryFindTrackingTableName = `SELECT TABNAME FROM  SysCat.Tables WHERE TabName LIKE '%s_%%' LIMIT 1`
+	queryDropTable             = `DROP TABLE IF EXISTS %s`
 )
 
 func TestSource_Snapshot_Success(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 
-	cfg, err := prepareConfig()
+	tableName := randomIdentifier(t)
+
+	cfg, err := prepareConfig(tableName)
 	if err != nil {
 		t.Skip()
 	}
 
-	err = prepareData(ctx, cfg[config.KeyConnection])
+	err = prepareData(ctx, cfg[config.KeyConnection], tableName)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	defer clearData(ctx, cfg[config.KeyConnection]) // nolint:errcheck,nolintlint
+	defer clearData(ctx, cfg[config.KeyConnection], cfg[config.KeyTable]) // nolint:errcheck,nolintlint
 
 	s := New()
 
@@ -125,19 +131,23 @@ func TestSource_Snapshot_Success(t *testing.T) {
 }
 
 func TestSource_Snapshot_Continue(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 
-	cfg, err := prepareConfig()
+	tableName := randomIdentifier(t)
+
+	cfg, err := prepareConfig(tableName)
 	if err != nil {
 		t.Skip()
 	}
 
-	err = prepareData(ctx, cfg[config.KeyConnection])
+	err = prepareData(ctx, cfg[config.KeyConnection], tableName)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	defer clearData(ctx, cfg[config.KeyConnection]) // nolint:errcheck,nolintlint
+	defer clearData(ctx, cfg[config.KeyConnection], cfg[config.KeyTable]) // nolint:errcheck,nolintlint
 
 	s := New()
 
@@ -194,19 +204,23 @@ func TestSource_Snapshot_Continue(t *testing.T) {
 }
 
 func TestSource_Snapshot_Empty_Table(t *testing.T) {
-	cfg, err := prepareConfig()
+	t.Parallel()
+
+	tableName := randomIdentifier(t)
+
+	cfg, err := prepareConfig(tableName)
 	if err != nil {
 		t.Skip()
 	}
 
 	ctx := context.Background()
 
-	err = prepareEmptyTable(ctx, cfg[config.KeyConnection])
+	err = prepareEmptyTable(ctx, cfg[config.KeyConnection], tableName)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	defer clearData(ctx, cfg[config.KeyConnection]) // nolint:errcheck,nolintlint
+	defer clearData(ctx, cfg[config.KeyConnection], cfg[config.KeyTable]) // nolint:errcheck,nolintlint
 
 	s := New()
 
@@ -234,19 +248,23 @@ func TestSource_Snapshot_Empty_Table(t *testing.T) {
 }
 
 func TestSource_CDC(t *testing.T) {
-	cfg, err := prepareConfig()
+	t.Parallel()
+
+	tableName := randomIdentifier(t)
+
+	cfg, err := prepareConfig(tableName)
 	if err != nil {
 		t.Skip()
 	}
 
 	ctx := context.Background()
 
-	err = prepareEmptyTable(ctx, cfg[config.KeyConnection])
+	err = prepareEmptyTable(ctx, cfg[config.KeyConnection], tableName)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	defer clearData(ctx, cfg[config.KeyConnection]) // nolint:errcheck,nolintlint
+	defer clearData(ctx, cfg[config.KeyConnection], cfg[config.KeyTable]) // nolint:errcheck,nolintlint
 
 	s := New()
 
@@ -267,7 +285,7 @@ func TestSource_CDC(t *testing.T) {
 	}
 
 	// load data for cdc.
-	err = prepareCDCData(ctx, cfg[config.KeyConnection])
+	err = prepareCDCData(ctx, cfg[config.KeyConnection], cfg[config.KeyTable])
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -320,19 +338,23 @@ func TestSource_CDC(t *testing.T) {
 }
 
 func TestSource_CDC_Empty_Table(t *testing.T) {
-	cfg, err := prepareConfig()
+	t.Parallel()
+
+	tableName := randomIdentifier(t)
+
+	cfg, err := prepareConfig(tableName)
 	if err != nil {
 		t.Skip()
 	}
 
 	ctx := context.Background()
 
-	err = prepareEmptyTable(ctx, cfg[config.KeyConnection])
+	err = prepareEmptyTable(ctx, cfg[config.KeyConnection], tableName)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	defer clearData(ctx, cfg[config.KeyConnection]) // nolint:errcheck,nolintlint
+	defer clearData(ctx, cfg[config.KeyConnection], cfg[config.KeyTable]) // nolint:errcheck,nolintlint
 
 	s := New()
 
@@ -365,9 +387,13 @@ func TestSource_CDC_Empty_Table(t *testing.T) {
 }
 
 func TestSource_Snapshot_Off(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 
-	cfg, err := prepareConfig()
+	tableName := randomIdentifier(t)
+
+	cfg, err := prepareConfig(tableName)
 	if err != nil {
 		t.Skip()
 	}
@@ -375,12 +401,12 @@ func TestSource_Snapshot_Off(t *testing.T) {
 	// turn off snapshot
 	cfg[KeySnapshot] = "false"
 
-	err = prepareData(ctx, cfg[config.KeyConnection])
+	err = prepareData(ctx, cfg[config.KeyConnection], tableName)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	defer clearData(ctx, cfg[config.KeyConnection]) // nolint:errcheck,nolintlint
+	defer clearData(ctx, cfg[config.KeyConnection], cfg[config.KeyTable]) // nolint:errcheck,nolintlint
 
 	s := New()
 
@@ -396,7 +422,7 @@ func TestSource_Snapshot_Off(t *testing.T) {
 	}
 
 	// load data for cdc.
-	err = prepareCDCData(ctx, cfg[config.KeyConnection])
+	err = prepareCDCData(ctx, cfg[config.KeyConnection], cfg[config.KeyTable])
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -417,7 +443,7 @@ func TestSource_Snapshot_Off(t *testing.T) {
 	}
 }
 
-func prepareConfig() (map[string]string, error) {
+func prepareConfig(tableName string) (map[string]string, error) {
 	connection := os.Getenv("DB2_CONNECTION")
 
 	if connection == "" {
@@ -426,12 +452,12 @@ func prepareConfig() (map[string]string, error) {
 
 	return map[string]string{
 		config.KeyConnection: connection,
-		config.KeyTable:      table,
+		config.KeyTable:      tableName,
 		KeyOrderingColumn:    "ID",
 	}, nil
 }
 
-func prepareData(ctx context.Context, conn string) error {
+func prepareData(ctx context.Context, conn, tableName string) error {
 	db, err := sql.Open("go_ibm_db", conn)
 	if err != nil {
 		return err
@@ -444,22 +470,12 @@ func prepareData(ctx context.Context, conn string) error {
 		return err
 	}
 
-	_, err = db.Exec(queryDropTable)
+	_, err = db.Exec(fmt.Sprintf(queryCreateTable, tableName))
 	if err != nil {
 		return err
 	}
 
-	_, err = db.Exec(queryDropTrackingTable)
-	if err != nil {
-		return err
-	}
-
-	_, err = db.Exec(queryCreateTable)
-	if err != nil {
-		return err
-	}
-
-	_, err = db.Exec(queryInsertTestData)
+	_, err = db.Exec(fmt.Sprintf(queryInsertTestData, tableName))
 	if err != nil {
 		return err
 	}
@@ -467,7 +483,7 @@ func prepareData(ctx context.Context, conn string) error {
 	return nil
 }
 
-func clearData(ctx context.Context, conn string) error {
+func clearData(ctx context.Context, conn, tableName string) error {
 	db, err := sql.Open("go_ibm_db", conn)
 	if err != nil {
 		return err
@@ -480,12 +496,48 @@ func clearData(ctx context.Context, conn string) error {
 		return err
 	}
 
-	_, err = db.Exec(queryDropTable)
+	_, err = db.Exec(fmt.Sprintf(queryDropTable, tableName))
 	if err != nil {
 		return err
 	}
 
-	_, err = db.Exec(queryDropTrackingTable)
+	rows, err := db.QueryContext(ctx, fmt.Sprintf(queryFindTrackingTableName, tableName))
+	if err != nil {
+		return fmt.Errorf("exec query find table: %w", err)
+	}
+
+	defer rows.Close() //nolint:staticcheck,nolintlint
+
+	var name string
+	for rows.Next() {
+		er := rows.Scan(&name)
+		if er != nil {
+			return fmt.Errorf("rows scan: %w", er)
+		}
+	}
+
+	_, err = db.ExecContext(ctx, fmt.Sprintf(queryDropTable, name))
+	if err != nil {
+		return fmt.Errorf("exec drop table query: %w", err)
+	}
+
+	return nil
+}
+
+func prepareEmptyTable(ctx context.Context, conn, tableName string) error {
+	db, err := sql.Open("go_ibm_db", conn)
+	if err != nil {
+		return err
+	}
+
+	defer db.Close()
+
+	err = db.PingContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec(fmt.Sprintf(queryCreateTable, tableName))
 	if err != nil {
 		return err
 	}
@@ -493,7 +545,7 @@ func clearData(ctx context.Context, conn string) error {
 	return nil
 }
 
-func prepareEmptyTable(ctx context.Context, conn string) error {
+func prepareCDCData(ctx context.Context, conn, tableName string) error {
 	db, err := sql.Open("go_ibm_db", conn)
 	if err != nil {
 		return err
@@ -506,7 +558,17 @@ func prepareEmptyTable(ctx context.Context, conn string) error {
 		return err
 	}
 
-	_, err = db.Exec(queryCreateTable)
+	_, err = db.Exec(fmt.Sprintf(queryInsertCDCData, tableName))
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec(fmt.Sprintf(queryUpdateCDCData, tableName))
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec(fmt.Sprintf(queryDeleteCDCData, tableName))
 	if err != nil {
 		return err
 	}
@@ -514,33 +576,10 @@ func prepareEmptyTable(ctx context.Context, conn string) error {
 	return nil
 }
 
-func prepareCDCData(ctx context.Context, conn string) error {
-	db, err := sql.Open("go_ibm_db", conn)
-	if err != nil {
-		return err
-	}
+func randomIdentifier(t *testing.T) string {
+	t.Helper()
 
-	defer db.Close()
-
-	err = db.PingContext(ctx)
-	if err != nil {
-		return err
-	}
-
-	_, err = db.Exec(queryInsertCDCData)
-	if err != nil {
-		return err
-	}
-
-	_, err = db.Exec(queryUpdateCDCData)
-	if err != nil {
-		return err
-	}
-
-	_, err = db.Exec(queryDeleteCDCData)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return strings.ToUpper(fmt.Sprintf("%v_%d",
+		strings.ReplaceAll(strings.ToLower(t.Name()), "/", "_"),
+		time.Now().UnixMicro()%1000))
 }

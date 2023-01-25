@@ -59,28 +59,38 @@ type snapshotIterator struct {
 	position *position.Position
 	// columnTypes column types from table.
 	columnTypes map[string]string
+	// suffixName special suffix that connector uses for identify tracking table and triggers.
+	suffixName string
+}
+
+type snapshotParams struct {
+	db             *sqlx.DB
+	table          string
+	orderingColumn string
+	keys           []string
+	columns        []string
+	batchSize      int
+	position       *position.Position
+	columnTypes    map[string]string
+	suffixName     string
 }
 
 func newSnapshotIterator(
 	ctx context.Context,
-	db *sqlx.DB,
-	table, orderingColumn string,
-	keys, columns []string,
-	batchSize int,
-	position *position.Position,
-	columnTypes map[string]string,
+	params snapshotParams,
 ) (*snapshotIterator, error) {
 	var err error
 
 	it := &snapshotIterator{
-		db:             db,
-		table:          table,
-		columns:        columns,
-		keys:           keys,
-		orderingColumn: orderingColumn,
-		batchSize:      batchSize,
-		position:       position,
-		columnTypes:    columnTypes,
+		db:             params.db,
+		table:          params.table,
+		columns:        params.columns,
+		keys:           params.keys,
+		orderingColumn: params.orderingColumn,
+		batchSize:      params.batchSize,
+		position:       params.position,
+		columnTypes:    params.columnTypes,
+		suffixName:     params.suffixName,
 	}
 
 	err = it.loadRows(ctx)
@@ -88,8 +98,8 @@ func newSnapshotIterator(
 		return nil, fmt.Errorf("load rows: %w", err)
 	}
 
-	if position != nil {
-		it.maxValue = position.SnapshotMaxValue
+	if params.position != nil {
+		it.maxValue = params.position.SnapshotMaxValue
 	} else {
 		err = it.setMaxValue(ctx)
 		if err != nil {
@@ -138,6 +148,7 @@ func (i *snapshotIterator) Next(ctx context.Context) (sdk.Record, error) {
 		IteratorType:             position.TypeSnapshot,
 		SnapshotLastProcessedVal: transformedRow[i.orderingColumn],
 		SnapshotMaxValue:         i.maxValue,
+		SuffixName:               i.suffixName,
 	}
 
 	sdkPos, err := pos.ConvertToSDKPosition()
@@ -177,7 +188,7 @@ func (i *snapshotIterator) Stop() error {
 	if i.rows != nil {
 		err := i.rows.Close()
 		if err != nil {
-			return err
+			return fmt.Errorf("close rows")
 		}
 	}
 

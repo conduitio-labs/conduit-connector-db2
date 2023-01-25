@@ -17,6 +17,7 @@ package iterator
 import (
 	"context"
 	"fmt"
+	"time"
 
 	sdk "github.com/conduitio/conduit-connector-sdk"
 	"github.com/jmoiron/sqlx"
@@ -26,7 +27,7 @@ import (
 )
 
 const (
-	trackingTablePattern = "CONDUIT_TRACKING_%s"
+	trackingTablePattern = "CONDUIT_%s_%s"
 
 	// tracking table columns.
 	columnOperationType = "CONDUIT_OPERATION_TYPE"
@@ -76,13 +77,20 @@ type CombinedParams struct {
 func NewCombinedIterator(ctx context.Context, params CombinedParams) (*CombinedIterator, error) {
 	var err error
 
+	pos, err := position.ParseSDKPosition(params.SdkPosition)
+	if err != nil {
+		return nil, fmt.Errorf("parse position: %w", err)
+	}
+
+	suffixName := getSuffixName(pos)
+
 	it := &CombinedIterator{
 		conn:           params.Conn,
 		table:          params.Table,
 		columns:        params.Columns,
 		orderingColumn: params.OrderingColumn,
 		batchSize:      params.BatchSize,
-		trackingTable:  fmt.Sprintf(trackingTablePattern, params.Table),
+		trackingTable:  fmt.Sprintf(trackingTablePattern, params.Table, suffixName),
 	}
 
 	// get column types for converting and get primary keys information
@@ -94,25 +102,37 @@ func NewCombinedIterator(ctx context.Context, params CombinedParams) (*CombinedI
 	it.setKeys(params.CfgKeys)
 
 	// create tracking table, create triggers for cdc logic.
-	err = setupCDC(ctx, params.DB, it.table, it.trackingTable, it.tableInfo)
+	err = setupCDC(ctx, params.DB, it.table, it.trackingTable, suffixName, it.tableInfo)
 	if err != nil {
 		return nil, fmt.Errorf("setup cdc: %w", err)
 	}
 
-	pos, err := position.ParseSDKPosition(params.SdkPosition)
-	if err != nil {
-		return nil, fmt.Errorf("parse position: %w", err)
-	}
-
 	if params.Snapshot && (pos == nil || pos.IteratorType == position.TypeSnapshot) {
-		it.snapshot, err = newSnapshotIterator(ctx, params.DB, it.table, params.OrderingColumn, it.keys, params.Columns,
-			params.BatchSize, pos, it.tableInfo.ColumnTypes)
+		it.snapshot, err = newSnapshotIterator(ctx, snapshotParams{
+			db:             params.DB,
+			table:          params.Table,
+			orderingColumn: params.OrderingColumn,
+			keys:           it.keys,
+			columns:        params.Columns,
+			batchSize:      params.BatchSize,
+			position:       pos,
+			columnTypes:    it.tableInfo.ColumnTypes,
+			suffixName:     suffixName,
+		})
 		if err != nil {
 			return nil, fmt.Errorf("new shapshot iterator: %w", err)
 		}
 	} else {
-		it.cdc, err = newCDCIterator(ctx, params.DB, it.table, it.trackingTable, it.keys,
-			it.columns, it.batchSize, it.tableInfo.ColumnTypes, pos)
+		it.cdc, err = newCDCIterator(ctx, cdcParams{
+			db:            params.DB,
+			table:         it.table,
+			trackingTable: it.trackingTable,
+			keys:          it.keys,
+			columns:       it.columns,
+			batchSize:     it.batchSize,
+			columnTypes:   it.tableInfo.ColumnTypes,
+			position:      pos,
+		})
 		if err != nil {
 			return nil, fmt.Errorf("new shapshot iterator: %w", err)
 		}
@@ -133,7 +153,7 @@ func (c *CombinedIterator) HasNext(ctx context.Context) (bool, error) {
 
 		if !hasNext {
 			if er := c.switchToCDCIterator(ctx); er != nil {
-				return false, fmt.Errorf("switch to cdc iterator: %w", err)
+				return false, fmt.Errorf("switch to cdc iterator: %w", er)
 			}
 
 			return false, nil
@@ -205,8 +225,16 @@ func (c *CombinedIterator) switchToCDCIterator(ctx context.Context) error {
 		return err
 	}
 
-	c.cdc, err = newCDCIterator(ctx, db, c.table, c.trackingTable, c.keys,
-		c.columns, c.batchSize, c.tableInfo.ColumnTypes, nil)
+	c.cdc, err = newCDCIterator(ctx, cdcParams{
+		db:            db,
+		table:         c.table,
+		trackingTable: c.trackingTable,
+		keys:          c.keys,
+		columns:       c.columns,
+		batchSize:     c.batchSize,
+		columnTypes:   c.tableInfo.ColumnTypes,
+		position:      nil,
+	})
 	if err != nil {
 		return fmt.Errorf("new cdc iterator: %w", err)
 	}
@@ -229,4 +257,14 @@ func (c *CombinedIterator) setKeys(cfgKeys []string) {
 
 	// last priority ordering column.
 	c.keys = []string{c.orderingColumn}
+}
+
+func getSuffixName(pos *position.Position) string {
+	// get suffix from position
+	if pos != nil {
+		return pos.SuffixName
+	}
+
+	// create new suffix
+	return time.Now().Format("150405")
 }

@@ -33,9 +33,8 @@ import (
 
 const (
 	queryCreateTestTable       = `CREATE TABLE %s (id int, name VARCHAR(100))`
-	queryDropTestTable         = `DROP TABLE %s`
-	queryDropTestTrackingTable = `DROP TABLE IF EXISTS CONDUIT_TRACKING_%s`
-	queryIfExistTable          = `SELECT count(*) AS count FROM  SysCat.Tables WHERE TabName='CONDUIT_TRACKING_%s'`
+	queryDropTestTable         = `DROP TABLE IF EXISTS %s`
+	queryFindTrackingTableName = `SELECT TABNAME FROM  SysCat.Tables WHERE TabName LIKE 'CONDUIT_%s_%%' LIMIT 1`
 )
 
 type driver struct {
@@ -109,36 +108,30 @@ func afterTest(t *testing.T, cfg map[string]string) func(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		queryDropTable := fmt.Sprintf(queryDropTestTable, cfg[config.KeyTable])
-
-		_, err = db.Exec(queryDropTable)
+		_, err = db.Exec(fmt.Sprintf(queryDropTestTable, cfg[config.KeyTable]))
 		if err != nil {
 			t.Logf("drop test table: %v", err)
 		}
 
-		queryDropTrackingTable := fmt.Sprintf(queryDropTestTrackingTable, cfg[config.KeyTable])
-
-		// check if table exist.
-		rows, er := db.Query(fmt.Sprintf(queryIfExistTable, cfg[config.KeyTable]))
-		if er != nil {
-			t.Error(er)
+		rows, err := db.Query(fmt.Sprintf(queryFindTrackingTableName, cfg[config.KeyTable]))
+		if err != nil {
+			t.Errorf("find tracking table: %v", err)
 		}
 
 		defer rows.Close() //nolint:staticcheck,nolintlint
 
+		var name string
 		for rows.Next() {
-			var count int
-			err = rows.Scan(&count)
-			if err != nil {
-				t.Error(er)
+			er := rows.Scan(&name)
+			if er != nil {
+				t.Errorf("rows scan: %v", err)
 			}
+		}
 
-			if count == 1 {
-				// table exist, setup not needed.
-				_, err = db.Exec(queryDropTrackingTable)
-				if err != nil {
-					t.Errorf("drop test tracking table: %v", err)
-				}
+		if name != "" {
+			_, err = db.Exec(fmt.Sprintf(queryDropTestTable, name))
+			if err != nil {
+				t.Errorf("drop test tracking table: %v", err)
 			}
 		}
 

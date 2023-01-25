@@ -91,8 +91,9 @@ When all records are returned, the connector switches to the CDC iterator.
 ### Change Data Capture (CDC)
 
 This connector implements CDC features for DB2 by adding a tracking table and triggers to populate it. The tracking
-table has the same name as a target table with the prefix `CONDUIT_TRACKING_`. The tracking table has all the
-same columns as the target table plus three additional columns:
+table has the same name as a target table with the prefix `CONDUIT_` and suffix from time when pipeline started on
+format "hhmmss". For example for table `PRODUCTS` tracking will be looks like `CONDUIT_PRODUCTS_213315`.
+The tracking table has all the same columns as the target table plus three additional columns:
 
 | name                            | description                                          |
 |---------------------------------|------------------------------------------------------|
@@ -104,8 +105,8 @@ The connector saves  information about update, delete, insert `table` operations
 For example if user inserts new row into `table` connector will save all new columns values inside tracking table  
 with `CONDUIT_OPERATION_TYPE` = `insert`
 
-Triggers have name pattern `CONDUIT_TRIGGER_{{operation_type}}_{{table}}`. 
-
+Triggers have name pattern `CD_{{TABLENAME}}_{{OPERATION_TYPE}}_{{SUFFIXNAME}}`. For example:
+`CD_PRODUCTS_INSERT_213315` 
 
 Queries to retrieve change data from a tracking table are very similar to queries in a Snapshot iterator, but with 
 `CONDUIT_TRACKING_ID` ordering column.
@@ -141,8 +142,4 @@ You have to restart pipeline, tracking table will be recreated by connector.
 #### Is it possible to change table name?
 
 Yes. Stop the pipeline, change the value of the `table` in the Source configuration, 
-change the name of the tracking table using a pattern `CONDUIT_TRACKING_{{TABLE}}`
-
-#### Is it possible to use two identical Db2 source connectors with the same configs on different pipelines?
-
-No. You can add more destination connectors on pipeline if you need it.
+change the name of the tracking table using a pattern `CONDUIT_{{TABLE}}_{{SUFFIXNAME}}`

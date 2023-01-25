@@ -87,29 +87,35 @@ type cdcIterator struct {
 	columnTypes map[string]string
 }
 
+type cdcParams struct {
+	db            *sqlx.DB
+	table         string
+	trackingTable string
+	keys          []string
+	columns       []string
+	batchSize     int
+	columnTypes   map[string]string
+	position      *position.Position
+}
+
 // newCDCIterator create new cdc iterator.
 func newCDCIterator(
 	ctx context.Context,
-	db *sqlx.DB,
-	table, trackingTable string,
-	keys, columns []string,
-	batchSize int,
-	columnTypes map[string]string,
-	position *position.Position,
+	params cdcParams,
 ) (*cdcIterator, error) {
 	var (
 		err error
 	)
 
 	it := &cdcIterator{
-		db:            db,
-		table:         table,
-		trackingTable: trackingTable,
-		columns:       columns,
-		keys:          keys,
-		batchSize:     batchSize,
-		position:      position,
-		columnTypes:   columnTypes,
+		db:            params.db,
+		table:         params.table,
+		trackingTable: params.trackingTable,
+		columns:       params.columns,
+		keys:          params.keys,
+		batchSize:     params.batchSize,
+		position:      params.position,
+		columnTypes:   params.columnTypes,
 		tableSrv:      newTrackingTableService(),
 	}
 
@@ -163,6 +169,7 @@ func (i *cdcIterator) Next(ctx context.Context) (sdk.Record, error) {
 	pos := position.Position{
 		IteratorType: position.TypeCDC,
 		CDCLastID:    int(id),
+		SuffixName:   i.trackingTable[len(i.trackingTable)-6:],
 	}
 
 	convertedPosition, err := pos.ConvertToSDKPosition()
@@ -366,7 +373,7 @@ func (i *cdcIterator) clearTrackingTable(ctx context.Context) {
 func setupCDC(
 	ctx context.Context,
 	db *sqlx.DB,
-	tableName, trackingTableName string,
+	tableName, trackingTableName, suffixName string,
 	tableInfo coltypes.TableInfo,
 ) error {
 	var (
@@ -392,7 +399,7 @@ func setupCDC(
 		var count int
 		er := rows.Scan(&count)
 		if er != nil {
-			return fmt.Errorf("scan: %w", err)
+			return fmt.Errorf("scan: %w", er)
 		}
 
 		if count == 1 {
@@ -409,7 +416,7 @@ func setupCDC(
 		}
 	}
 
-	triggersQuery := buildTriggers(trackingTableName, tableName, tableInfo.ColumnTypes)
+	triggersQuery := buildTriggers(trackingTableName, tableName, suffixName, tableInfo.ColumnTypes)
 
 	// add trigger to catch insert.
 	_, err = tx.ExecContext(ctx, triggersQuery.queryTriggerCatchInsert)

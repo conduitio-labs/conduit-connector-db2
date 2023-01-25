@@ -21,7 +21,7 @@ import (
 
 const (
 	queryIfExistTable = `
-	SELECT count(*) AS count FROM  SysCat.Tables WHERE TabName='%s';
+	SELECT count(*) AS count FROM  SysCat.Tables WHERE TabName='%s'
 `
 	queryCreateTable = `
 		CREATE TABLE %s (
@@ -32,7 +32,7 @@ const (
 		)
 	`
 	queryTriggerTemplate = `
-      CREATE OR REPLACE TRIGGER CONDUIT_TRIGGER_{{operation_type}}_{{table}}
+      CREATE OR REPLACE TRIGGER CD_{{table}}_{{operation_type}}_%s
       AFTER {{operation_type}} ON {{table}}
       REFERENCING {{row_type}} ROW AS rw
       FOR EACH ROW
@@ -54,7 +54,7 @@ type queryTriggers struct {
 	queryTriggerCatchDelete string
 }
 
-func buildTriggers(trackingTable, table string, columnsTypes map[string]string) queryTriggers {
+func buildTriggers(trackingTable, table, suffix string, columnsTypes map[string]string) queryTriggers {
 	columnNames := make([]string, 0)
 
 	for key := range columnsTypes {
@@ -68,7 +68,7 @@ func buildTriggers(trackingTable, table string, columnsTypes map[string]string) 
 
 	columnNames = append(columnNames, columnOperationType)
 
-	triggerTemplate := fmt.Sprintf(queryTriggerTemplate, trackingTable,
+	triggerTemplate := fmt.Sprintf(queryTriggerTemplate, suffix, trackingTable,
 		strings.Join(columnNames, ","), strings.Join(nwValues, ","))
 
 	triggerTemplate = strings.ReplaceAll(triggerTemplate, placeholderTable, table)

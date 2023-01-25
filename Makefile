@@ -14,4 +14,3 @@ lint:
 mockgen:
 	mockgen -package mock -source destination/interface.go -destination destination/mock/destination.go
 	mockgen -package mock -source source/interface.go -destination source/mock/iterator.go
-

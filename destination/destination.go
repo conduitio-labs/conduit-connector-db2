@@ -49,15 +49,9 @@ func (d *Destination) Parameters() map[string]sdk.Parameter {
 			Default:     "",
 		},
 		config.KeyTable: {
-			Description: "name of the table that the connector should write to.",
+			Description: "Name of the table that the connector should write to.",
 			Required:    true,
 			Default:     "",
-		},
-		config.KeyPrimaryKey: {
-			Description: "A column name that used to detect if the target table" +
-				" already contains the record (destination). It must be unique",
-			Required: true,
-			Default:  "",
 		},
 	}
 }
@@ -86,9 +80,8 @@ func (d *Destination) Open(ctx context.Context) error {
 	}
 
 	d.writer, err = writer.NewWriter(ctx, writer.Params{
-		DB:        db,
-		Table:     d.config.Table,
-		KeyColumn: d.config.Key,
+		DB:    db,
+		Table: d.config.Table,
 	})
 
 	if err != nil {
@@ -102,10 +95,10 @@ func (d *Destination) Open(ctx context.Context) error {
 func (d *Destination) Write(ctx context.Context, records []sdk.Record) (int, error) {
 	for i, record := range records {
 		err := sdk.Util.Destination.Route(ctx, record,
-			d.writer.Upsert,
-			d.writer.Upsert,
+			d.writer.Insert,
+			d.writer.Update,
 			d.writer.Delete,
-			d.writer.Upsert,
+			d.writer.Insert,
 		)
 		if err != nil {
 			return i, fmt.Errorf("route %s: %w", record.Operation.String(), err)

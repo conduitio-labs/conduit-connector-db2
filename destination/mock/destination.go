@@ -63,16 +63,30 @@ func (mr *MockWriterMockRecorder) Delete(ctx, record interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockWriter)(nil).Delete), ctx, record)
 }
 
-// Upsert mocks base method.
-func (m *MockWriter) Upsert(ctx context.Context, record sdk.Record) error {
+// Insert mocks base method.
+func (m *MockWriter) Insert(ctx context.Context, record sdk.Record) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Upsert", ctx, record)
+	ret := m.ctrl.Call(m, "Insert", ctx, record)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// Upsert indicates an expected call of Upsert.
-func (mr *MockWriterMockRecorder) Upsert(ctx, record interface{}) *gomock.Call {
+// Insert indicates an expected call of Insert.
+func (mr *MockWriterMockRecorder) Insert(ctx, record interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Upsert", reflect.TypeOf((*MockWriter)(nil).Upsert), ctx, record)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Insert", reflect.TypeOf((*MockWriter)(nil).Insert), ctx, record)
+}
+
+// Update mocks base method.
+func (m *MockWriter) Update(ctx context.Context, record sdk.Record) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Update", ctx, record)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Update indicates an expected call of Update.
+func (mr *MockWriterMockRecorder) Update(ctx, record interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockWriter)(nil).Update), ctx, record)
 }

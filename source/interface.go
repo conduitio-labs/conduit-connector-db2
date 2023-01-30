@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package destination
+package source
 
 import (
 	"context"
@@ -20,10 +20,10 @@ import (
 	sdk "github.com/conduitio/conduit-connector-sdk"
 )
 
-// Writer defines a writer interface needed for the Destination.
-type Writer interface {
-	Delete(ctx context.Context, record sdk.Record) error
-	Insert(ctx context.Context, record sdk.Record) error
-	Update(ctx context.Context, record sdk.Record) error
-	Close(ctx context.Context) error
+// Iterator interface.
+type Iterator interface {
+	HasNext(ctx context.Context) (bool, error)
+	Next(ctx context.Context) (sdk.Record, error)
+	Stop() error
+	Ack(ctx context.Context, rp sdk.Position) error
 }

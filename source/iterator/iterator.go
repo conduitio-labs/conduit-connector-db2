@@ -156,7 +156,7 @@ func (c *CombinedIterator) HasNext(ctx context.Context) (bool, error) {
 				return false, fmt.Errorf("switch to cdc iterator: %w", er)
 			}
 
-			return false, nil
+			return c.cdc.HasNext(ctx)
 		}
 
 		return true, nil

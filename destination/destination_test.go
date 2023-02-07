@@ -47,7 +47,6 @@ func TestDestination_Configure(t *testing.T) {
 				cfg: map[string]string{
 					config.KeyConnection: "HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=pwd",
 					config.KeyTable:      "CLIENTS",
-					config.KeyPrimaryKey: "ID",
 				},
 			},
 			wantErr: false,
@@ -56,8 +55,7 @@ func TestDestination_Configure(t *testing.T) {
 			name: "fail, missing connection",
 			args: args{
 				cfg: map[string]string{
-					config.KeyTable:      "CLIENTS",
-					config.KeyPrimaryKey: "ID",
+					config.KeyTable: "CLIENTS",
 				},
 			},
 			wantErr: true,
@@ -67,17 +65,6 @@ func TestDestination_Configure(t *testing.T) {
 			args: args{
 				cfg: map[string]string{
 					config.KeyConnection: "HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=pwd",
-					config.KeyPrimaryKey: "ID",
-				},
-			},
-			wantErr: true,
-		},
-		{
-			name: "fail, missed primary key",
-			args: args{
-				cfg: map[string]string{
-					config.KeyConnection: "HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=pwd",
-					config.KeyTable:      "CLIENTS",
 				},
 			},
 			wantErr: true,
@@ -122,7 +109,7 @@ func TestDestination_Write(t *testing.T) {
 		}
 
 		w := mock.NewMockWriter(ctrl)
-		w.EXPECT().Upsert(ctx, record).Return(nil)
+		w.EXPECT().Insert(ctx, record).Return(nil)
 
 		d := Destination{
 			writer: w,
@@ -151,7 +138,7 @@ func TestDestination_Write(t *testing.T) {
 		}
 
 		w := mock.NewMockWriter(ctrl)
-		w.EXPECT().Upsert(ctx, record).Return(writer.ErrEmptyPayload)
+		w.EXPECT().Insert(ctx, record).Return(writer.ErrEmptyPayload)
 
 		d := Destination{
 			writer: w,

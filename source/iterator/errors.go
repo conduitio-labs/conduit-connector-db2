@@ -12,18 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package destination
+package iterator
 
 import (
-	"context"
-
-	sdk "github.com/conduitio/conduit-connector-sdk"
+	"errors"
 )
 
-// Writer defines a writer interface needed for the Destination.
-type Writer interface {
-	Delete(ctx context.Context, record sdk.Record) error
-	Insert(ctx context.Context, record sdk.Record) error
-	Update(ctx context.Context, record sdk.Record) error
-	Close(ctx context.Context) error
-}
+var (
+	ErrNoKey                     = errors.New("no key")
+	ErrNoOrderingColumn          = errors.New("no ordering column")
+	ErrWrongTrackingIDType       = errors.New("tracking id wrong type")
+	ErrWrongTrackingOperatorType = errors.New("tracking column wrong type")
+	ErrNoInitializedIterator     = errors.New("not initialized iterator")
+	ErrUnknownOperatorType       = errors.New("unknown iterator type")
+)

@@ -6,7 +6,7 @@ on:
   pull_request:
 
 jobs:
-  build:
+  build_and_lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -24,3 +24,14 @@ jobs:
           CGO_LDFLAGS: -L/home/runner/work/clidriver/lib
           LD_LIBRARY_PATH: /home/runner/work/clidriver/lib
         run: make test GOTEST_FLAGS="-v -count=1 -race -gcflags=all=-d=checkptr=0"
+
+      - name: golangci-lint
+        env:
+          DB2_CONNECTION: HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=pwd
+          IBM_DB_HOME: /home/runner/work/clidriver
+          CGO_CFLAGS: -I/home/runner/work/clidriver/include
+          CGO_LDFLAGS: -L/home/runner/work/clidriver/lib
+          LD_LIBRARY_PATH: /home/runner/work/clidriver/lib
+        uses: golangci/golangci-lint-action@v3.3.1
+        with:
+          version: v1.50.1

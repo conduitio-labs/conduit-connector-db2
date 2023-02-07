@@ -18,10 +18,11 @@ import (
 	sdk "github.com/conduitio/conduit-connector-sdk"
 
 	"github.com/conduitio-labs/conduit-connector-db2/destination"
+	"github.com/conduitio-labs/conduit-connector-db2/source"
 )
 
 var Connector = sdk.Connector{
 	NewSpecification: Specification,
-	NewSource:        nil,
+	NewSource:        source.New,
 	NewDestination:   destination.New,
 }

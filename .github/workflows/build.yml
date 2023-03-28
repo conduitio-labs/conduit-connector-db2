@@ -32,6 +32,6 @@ jobs:
           CGO_CFLAGS: -I/home/runner/work/clidriver/include
           CGO_LDFLAGS: -L/home/runner/work/clidriver/lib
           LD_LIBRARY_PATH: /home/runner/work/clidriver/lib
-        uses: golangci/golangci-lint-action@v3.3.1
+        uses: golangci/golangci-lint-action@v3.4.0
         with:
           version: v1.50.1

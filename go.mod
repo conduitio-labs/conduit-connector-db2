@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/brianvoe/gofakeit v3.18.0+incompatible
 	github.com/conduitio/conduit-connector-sdk v0.6.0
-	github.com/go-playground/validator/v10 v10.14.0
+	github.com/go-playground/validator/v10 v10.14.1
 	github.com/golang/mock v1.6.0
 	github.com/huandu/go-sqlbuilder v1.21.0
 	github.com/ibmdb/go_ibm_db v0.4.3

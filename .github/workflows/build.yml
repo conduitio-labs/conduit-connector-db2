@@ -34,4 +34,4 @@ jobs:
           LD_LIBRARY_PATH: /home/runner/work/clidriver/lib
         uses: golangci/golangci-lint-action@v3.7.0
         with:
-          version: v1.50.1
+          version: v1.54.2

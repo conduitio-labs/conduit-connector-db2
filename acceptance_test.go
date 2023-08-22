@@ -44,7 +44,7 @@ type driver struct {
 }
 
 // GenerateRecord generates a random sdk.Record.
-func (d *driver) GenerateRecord(t *testing.T, operation sdk.Operation) sdk.Record {
+func (d *driver) GenerateRecord(_ *testing.T, operation sdk.Operation) sdk.Record {
 	atomic.AddInt32(&d.counter, 1)
 
 	return sdk.Record{
@@ -87,7 +87,7 @@ func TestAcceptance(t *testing.T) {
 }
 
 // beforeTest creates new table before each test.
-func beforeTest(t *testing.T, cfg map[string]string) func(t *testing.T) {
+func beforeTest(_ *testing.T, cfg map[string]string) func(t *testing.T) {
 	return func(t *testing.T) {
 		table := randomIdentifier(t)
 		t.Logf("table under test: %v", table)
@@ -101,7 +101,7 @@ func beforeTest(t *testing.T, cfg map[string]string) func(t *testing.T) {
 	}
 }
 
-func afterTest(t *testing.T, cfg map[string]string) func(t *testing.T) {
+func afterTest(_ *testing.T, cfg map[string]string) func(t *testing.T) {
 	return func(t *testing.T) {
 		db, err := sql.Open("go_ibm_db", cfg[config.KeyConnection])
 		if err != nil {
@@ -126,6 +126,9 @@ func afterTest(t *testing.T, cfg map[string]string) func(t *testing.T) {
 			if er != nil {
 				t.Errorf("rows scan: %v", err)
 			}
+		}
+		if err := rows.Err(); err != nil {
+			t.Errorf("error iterating rows: %v", err)
 		}
 
 		if name != "" {
@@ -156,7 +159,7 @@ func prepareConfig(t *testing.T) map[string]string {
 	}
 }
 
-func prepareData(t *testing.T, cfg map[string]string) error {
+func prepareData(_ *testing.T, cfg map[string]string) error {
 	db, err := sql.Open("go_ibm_db", cfg[config.KeyConnection])
 	if err != nil {
 		return err

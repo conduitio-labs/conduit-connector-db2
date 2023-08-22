@@ -249,7 +249,7 @@ func (i *cdcIterator) Stop() error {
 }
 
 // Ack check if record with position was recorded.
-func (i *cdcIterator) Ack(ctx context.Context, pos *position.Position) error {
+func (i *cdcIterator) Ack(_ context.Context, pos *position.Position) error {
 	if len(i.tableSrv.errCh) > 0 {
 		for v := range i.tableSrv.errCh {
 			return fmt.Errorf("clear tracking table: %w", v)
@@ -405,6 +405,9 @@ func setupCDC(
 		if count == 1 {
 			trackingTableExist = true
 		}
+	}
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("error iterating rows: %w", err)
 	}
 
 	if !trackingTableExist {

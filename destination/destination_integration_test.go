@@ -136,6 +136,9 @@ func TestIntegrationDestination_Write_Insert_Success(t *testing.T) {
 			t.Error(err)
 		}
 	}
+	if err := rows.Err(); err != nil {
+		t.Errorf("error iterating rows: %v", err)
+	}
 
 	if id != preparedID {
 		t.Error(errors.New("id and prepared id not equal"))
@@ -246,6 +249,9 @@ func TestIntegrationDestination_Write_Update_Success(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
+	}
+	if err := rows.Err(); err != nil {
+		t.Errorf("error iterating rows: %v", err)
 	}
 
 	if clVarchar != preparedVarchar {
@@ -360,6 +366,9 @@ func TestIntegrationDestination_Write_Delete_Success(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
+	}
+	if err := rows.Err(); err != nil {
+		t.Errorf("error iterating rows: %v", err)
 	}
 
 	if count != 0 {

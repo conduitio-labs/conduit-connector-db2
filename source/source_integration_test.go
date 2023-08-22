@@ -515,6 +515,9 @@ func clearData(ctx context.Context, conn, tableName string) error {
 			return fmt.Errorf("rows scan: %w", er)
 		}
 	}
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("error iterating rows: %w", err)
+	}
 
 	_, err = db.ExecContext(ctx, fmt.Sprintf(queryDropTable, name))
 	if err != nil {

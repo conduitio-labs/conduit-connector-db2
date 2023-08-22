@@ -117,7 +117,7 @@ func isTypeWithRequiredLength(elem string) bool {
 }
 
 // TransformRow converts row map values to appropriate Go types, based on the columnTypes.
-func TransformRow(ctx context.Context, row map[string]any, columnTypes map[string]string) (map[string]any, error) {
+func TransformRow(_ context.Context, row map[string]any, columnTypes map[string]string) (map[string]any, error) {
 	result := make(map[string]any, len(row))
 
 	for key, value := range row {
@@ -148,7 +148,7 @@ func TransformRow(ctx context.Context, row map[string]any, columnTypes map[strin
 
 // ConvertStructureData converts a sdk.StructureData values to a proper database types.
 func ConvertStructureData(
-	ctx context.Context,
+	_ context.Context,
 	columnTypes map[string]string,
 	data sdk.StructuredData,
 ) (sdk.StructuredData, error) {
@@ -249,6 +249,8 @@ func GetTableInfo(ctx context.Context, querier Querier, tableName string) (Table
 		return TableInfo{}, fmt.Errorf("query column types: %w", err)
 	}
 
+	defer rows.Close()
+
 	columnTypes := make(map[string]string)
 	columnLengths := make(map[string]int)
 	primaryKeys := make([]string, 0)
@@ -270,6 +272,9 @@ func GetTableInfo(ctx context.Context, querier Querier, tableName string) (Table
 		if keyseq != nil && *keyseq == 1 {
 			primaryKeys = append(primaryKeys, columnName)
 		}
+	}
+	if err := rows.Err(); err != nil {
+		return TableInfo{}, fmt.Errorf("error iterating rows: %w", err)
 	}
 
 	return TableInfo{

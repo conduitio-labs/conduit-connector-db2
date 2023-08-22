@@ -20,10 +20,9 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/conduitio-labs/conduit-connector-db2/coltypes"
 	sdk "github.com/conduitio/conduit-connector-sdk"
 	"github.com/huandu/go-sqlbuilder"
-
-	"github.com/conduitio-labs/conduit-connector-db2/coltypes"
 )
 
 const (
@@ -61,7 +60,7 @@ func NewWriter(ctx context.Context, params Params) (*Writer, error) {
 }
 
 // Close closes the underlying db connection.
-func (w *Writer) Close(ctx context.Context) error {
+func (w *Writer) Close(context.Context) error {
 	return w.db.Close()
 }
 

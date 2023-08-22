@@ -7,7 +7,7 @@ It provides both, a source and a destination DB2 connector.
 
 ### Prerequisites
 
-- [Go](https://go.dev/) 1.18
+- [Go](https://go.dev/) 1.21
 - (optional) [golangci-lint](https://github.com/golangci/golangci-lint) 1.48.0
 
 The Connector uses [go_ibm_db](https://github.com/ibmdb/go_ibm_db) library. This library is required to install the 

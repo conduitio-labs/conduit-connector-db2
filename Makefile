@@ -16,8 +16,14 @@ test:
 			exit $$ret
 
 lint:
-	$(GOLINT) run --timeout=5m -c .golangci.yml
+	golangci-lint run -v
 
 mockgen:
 	mockgen -package mock -source destination/interface.go -destination destination/mock/destination.go
 	mockgen -package mock -source source/interface.go -destination source/mock/iterator.go
+
+.PHONY: install-tools
+install-tools:
+	@echo Installing tools from tools.go
+	@go list -e -f '{{ join .Imports "\n" }}' tools.go | xargs -tI % go install %
+	@go mod tidy

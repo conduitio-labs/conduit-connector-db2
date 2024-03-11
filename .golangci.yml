@@ -13,6 +13,7 @@ linters-settings:
     ignore-tests: true
   goheader:
     template-path: '.golangci.goheader.template'
+
   lll:
     line-length: 120
 
@@ -22,7 +23,6 @@ linters:
   disable-all: true
   enable:
     - bodyclose
-    - deadcode
     # - depguard
     - dogsled
     - durationcheck

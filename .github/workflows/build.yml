@@ -14,7 +14,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.21"
+          go-version-file: 'go.mod'
 
       - name: Test
         env:
@@ -25,6 +25,14 @@ jobs:
           LD_LIBRARY_PATH: /home/runner/work/clidriver/lib
         run: make test GOTEST_FLAGS="-v -count=1 -race -gcflags=all=-d=checkptr=0"
 
+      # This step sets up the variable steps.golangci-lint-version.outputs.v
+      # to contain the version of golangci-lint (e.g. v1.54.2).
+      # The version is taken from go.mod.
+      - name: Golangci-lint version
+        id: golangci-lint-version
+        run: |
+          GOLANGCI_LINT_VERSION=$( go list -m -f '{{.Version}}' github.com/golangci/golangci-lint )
+          echo "v=$GOLANGCI_LINT_VERSION" >> "$GITHUB_OUTPUT"
       - name: golangci-lint
         env:
           DB2_CONNECTION: HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=pwd
@@ -32,6 +40,8 @@ jobs:
           CGO_CFLAGS: -I/home/runner/work/clidriver/include
           CGO_LDFLAGS: -L/home/runner/work/clidriver/lib
           LD_LIBRARY_PATH: /home/runner/work/clidriver/lib
+
         uses: golangci/golangci-lint-action@v3.7.1
         with:
-          version: v1.54.2
+          version: ${{ steps.golangci-lint-version.outputs.v }}
+          skip-pkg-cache: true

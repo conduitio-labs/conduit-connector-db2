@@ -236,6 +236,7 @@ func (i *snapshotIterator) loadRows(ctx context.Context) error {
 
 // getMaxValue get max value from ordered column.
 func (i *snapshotIterator) setMaxValue(ctx context.Context) error {
+	//nolint:sqlclosecheck // false positive https://github.com/ryanrolds/sqlclosecheck/issues/35
 	rows, err := i.db.QueryxContext(ctx, fmt.Sprintf(queryGetMaxValue, i.orderingColumn, i.table))
 	if err != nil {
 		return fmt.Errorf("execute query get max value: %w", err)

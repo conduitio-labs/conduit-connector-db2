@@ -41,7 +41,7 @@ jobs:
           CGO_LDFLAGS: -L/home/runner/work/clidriver/lib
           LD_LIBRARY_PATH: /home/runner/work/clidriver/lib
 
-        uses: golangci/golangci-lint-action@v4.0.0
+        uses: golangci/golangci-lint-action@v5
         with:
           version: ${{ steps.golangci-lint-version.outputs.v }}
-          skip-pkg-cache: true
+          args: --timeout=2m

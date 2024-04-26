@@ -1,11 +1,10 @@
-GOLINT := golangci-lint
 DB2_STARTUP_TIMEOUT ?= 50
 
-.PHONY: build test
-
+.PHONY: build
 build:
-	go build -o conduit-connector-db2 cmd/db2/main.go
+	go build -ldflags "-X 'github.com/conduitio-labs/conduit-connector-db2.version=${VERSION}'" -o conduit-connector-db2 cmd/connector/main.go
 
+.PHONY: test
 test:
 	go install github.com/ibmdb/go_ibm_db/installer@v0.4.2
 	go run $(shell go env GOMODCACHE)/github.com/ibmdb/go_ibm_db@v0.4.2/installer/setup.go
@@ -15,9 +14,11 @@ test:
 			docker stop mydb2; \
 			exit $$ret
 
+.PHONY: lint
 lint:
 	golangci-lint run -v
 
+.PHONY: mockgen
 mockgen:
 	mockgen -package mock -source destination/interface.go -destination destination/mock/destination.go
 	mockgen -package mock -source source/interface.go -destination source/mock/iterator.go

@@ -8,7 +8,7 @@ services:
       - "db2_data:/database"
     privileged: true
     healthcheck:
-      test: [ "CMD-SHELL", "su - db2inst1 -c \"db2 connect to <DB_NAME> user <USER_NAME> using <PASSWORD>\"" ]
+      test: [ "CMD-SHELL", "su - db2inst1 -c \"db2 connect to testdb user db2inst1 using pwd\"" ]
       start_period: 2m
       timeout: 10s
       interval: 10s

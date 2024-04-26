@@ -18,7 +18,9 @@ import (
 	sdk "github.com/conduitio/conduit-connector-sdk"
 )
 
-type Spec struct{}
+// version is set during the build process with ldflags (see Makefile).
+// Default version matches default from runtime/debug.
+var version = "(devel)"
 
 // Specification returns the Plugin's Specification.
 func Specification() sdk.Specification {
@@ -27,7 +29,7 @@ func Specification() sdk.Specification {
 		Summary: "The DB2 source and destination plugin for Conduit, written in Go.",
 		Description: "The DB2 connector is one of Conduit plugins. " +
 			"It provides both, a source and a destination DB2 connector.",
-		Version: "v0.1.0",
+		Version: version,
 		Author:  "Meroxa, Inc.& Yalantis",
 	}
 }

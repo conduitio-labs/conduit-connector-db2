@@ -6,13 +6,12 @@ build:
 
 .PHONY: test
 test:
-	go install github.com/ibmdb/go_ibm_db/installer@v0.4.2
-	go run $(shell go env GOMODCACHE)/github.com/ibmdb/go_ibm_db@v0.4.2/installer/setup.go
-	docker run -itd --name mydb2 --privileged=true -p 50000:50000 -e LICENSE=accept -e DB2INST1_PASSWORD=pwd -e DBNAME=testdb -v /db2/vol:/database ibmcom/db2
-	sleep $(DB2_STARTUP_TIMEOUT)
-	go test $(GOTEST_FLAGS) ./...; ret=$$?; \
-			docker stop mydb2; \
-			exit $$ret
+	go list -f "{{.Module.Version}}" github.com/ibmdb/go_ibm_db/installer | xargs -tI % go run github.com/ibmdb/go_ibm_db/installer@%
+	# run required docker containers, execute integration tests, stop containers after tests
+	docker compose -f test/docker-compose.yml up --quiet-pull -d --wait
+	go test $(GOTEST_FLAGS) -race ./...; ret=$$?; \
+		docker compose -f test/docker-compose.yml down --volumes; \
+		exit $$ret
 
 .PHONY: lint
 lint:
@@ -26,5 +25,5 @@ mockgen:
 .PHONY: install-tools
 install-tools:
 	@echo Installing tools from tools.go
-	@go list -e -f '{{ join .Imports "\n" }}' tools.go | xargs -tI % go install %
+	@go list -e -f '{{ join .Imports "\n" }}' tools.go | xargs -I % go list -f "%@{{.Module.Version}}" % | xargs -tI % go install %
 	@go mod tidy

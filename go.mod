@@ -8,7 +8,7 @@ require (
 	github.com/go-playground/validator/v10 v10.19.0
 	github.com/golang/mock v1.6.0
 	github.com/golangci/golangci-lint v1.57.2
-	github.com/huandu/go-sqlbuilder v1.27.1
+	github.com/huandu/go-sqlbuilder v1.27.2
 	github.com/ibmdb/go_ibm_db v0.4.5
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/matryer/is v1.4.1

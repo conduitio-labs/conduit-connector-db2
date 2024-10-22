@@ -24,7 +24,7 @@ jobs:
           echo "v=$GOLANGCI_LINT_VERSION" >> "$GITHUB_OUTPUT"
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v5
+        uses: golangci/golangci-lint-action@v6
         env:
           DB2_CONNECTION: HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=pwd
           IBM_DB_HOME: /home/runner/work/clidriver

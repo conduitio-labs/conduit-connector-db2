@@ -1,6 +1,6 @@
 run:
   timeout: 5m
-  
+
 linters-settings:
   gofmt:
     simplify: false
@@ -34,7 +34,7 @@ linters:
     # - errorlint
     # - exhaustive
     # - exhaustivestruct
-    - exportloopref
+    - copyloopvar
     # - forbidigo
     # - forcetypeassert
     # - funlen
@@ -72,7 +72,7 @@ linters:
     - predeclared
     - rowserrcheck
     - staticcheck
-    - structcheck
+    - unused
     - stylecheck
     - sqlclosecheck
     # - tagliatelle
@@ -83,7 +83,6 @@ linters:
     - unconvert
     # - unparam
     - unused
-    - varcheck
     - wastedassign
     - whitespace
   # - wrapcheck

@@ -12,39 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package config
+//go:generate paramgen -output=paramgen.go Configuration
+
+package common
 
 import (
-	"fmt"
 	"strings"
-
-	"github.com/conduitio-labs/conduit-connector-db2/validator"
-)
-
-const (
-	KeyConnection string = "connection"
-	KeyTable      string = "table"
 )
 
 // Config contains configurable values
 // shared between source and destination DB2 connector.
-type Config struct {
+type Configuration struct {
 	// Connection string connection to DB2 database.
-	Connection string `validate:"required"`
+	Connection string `json:"connection" validate:"required"`
 	// Table is a name of the table that the connector should write to or read from.
-	Table string `validate:"required,max=128"`
+	Table string `json:"table" validate:"required,lt=129"`
 }
 
-// Parse attempts to parse a provided map[string]string into a Config struct.
-func Parse(cfg map[string]string) (Config, error) {
-	config := Config{
-		Connection: cfg[KeyConnection],
-		Table:      strings.ToUpper(cfg[KeyTable]),
-	}
+// Init sets uppercase "table" name.
+func (c Configuration) Init() Configuration {
+	c.Table = strings.ToUpper(c.Table)
 
-	if err := validator.Validate(&config); err != nil {
-		return Config{}, fmt.Errorf("validate config: %w", err)
-	}
-
-	return config, nil
+	return c
 }

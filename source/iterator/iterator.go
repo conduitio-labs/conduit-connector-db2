@@ -19,11 +19,10 @@ import (
 	"fmt"
 	"time"
 
-	sdk "github.com/conduitio/conduit-connector-sdk"
-	"github.com/jmoiron/sqlx"
-
 	"github.com/conduitio-labs/conduit-connector-db2/coltypes"
 	"github.com/conduitio-labs/conduit-connector-db2/source/position"
+	"github.com/conduitio/conduit-commons/opencdc"
+	"github.com/jmoiron/sqlx"
 )
 
 const (
@@ -70,7 +69,7 @@ type CombinedParams struct {
 	Columns        []string
 	BatchSize      int
 	Snapshot       bool
-	SdkPosition    sdk.Position
+	SdkPosition    opencdc.Position
 }
 
 // NewCombinedIterator - create new iterator.
@@ -170,7 +169,7 @@ func (c *CombinedIterator) HasNext(ctx context.Context) (bool, error) {
 }
 
 // Next returns the next record.
-func (c *CombinedIterator) Next(ctx context.Context) (sdk.Record, error) {
+func (c *CombinedIterator) Next(ctx context.Context) (opencdc.Record, error) {
 	switch {
 	case c.snapshot != nil:
 		return c.snapshot.Next(ctx)
@@ -179,7 +178,7 @@ func (c *CombinedIterator) Next(ctx context.Context) (sdk.Record, error) {
 		return c.cdc.Next(ctx)
 
 	default:
-		return sdk.Record{}, ErrNoInitializedIterator
+		return opencdc.Record{}, ErrNoInitializedIterator
 	}
 }
 
@@ -197,7 +196,7 @@ func (c *CombinedIterator) Stop() error {
 }
 
 // Ack check if record with position was recorded.
-func (c *CombinedIterator) Ack(ctx context.Context, rp sdk.Position) error {
+func (c *CombinedIterator) Ack(ctx context.Context, rp opencdc.Position) error {
 	pos, err := position.ParseSDKPosition(rp)
 	if err != nil {
 		return fmt.Errorf("parse position: %w", err)

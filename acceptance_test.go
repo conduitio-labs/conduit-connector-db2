@@ -24,11 +24,10 @@ import (
 	"time"
 
 	"github.com/brianvoe/gofakeit"
+	"github.com/conduitio-labs/conduit-connector-db2/source/config"
+	"github.com/conduitio/conduit-commons/opencdc"
 	sdk "github.com/conduitio/conduit-connector-sdk"
 	"go.uber.org/goleak"
-
-	"github.com/conduitio-labs/conduit-connector-db2/config"
-	s "github.com/conduitio-labs/conduit-connector-db2/source"
 )
 
 const (
@@ -43,20 +42,20 @@ type driver struct {
 	counter int32
 }
 
-// GenerateRecord generates a random sdk.Record.
-func (d *driver) GenerateRecord(_ *testing.T, operation sdk.Operation) sdk.Record {
+// GenerateRecord generates a random opencdc.Record.
+func (d *driver) GenerateRecord(_ *testing.T, operation opencdc.Operation) opencdc.Record {
 	atomic.AddInt32(&d.counter, 1)
 
-	return sdk.Record{
+	return opencdc.Record{
 		Position:  nil,
 		Operation: operation,
 		Metadata: map[string]string{
-			config.KeyTable: d.Config.DestinationConfig[config.KeyTable],
+			config.ConfigTable: d.Config.DestinationConfig[config.ConfigTable],
 		},
-		Key: sdk.StructuredData{
+		Key: opencdc.StructuredData{
 			"ID": d.counter,
 		},
-		Payload: sdk.Change{After: sdk.RawData(
+		Payload: opencdc.Change{After: opencdc.RawData(
 			fmt.Sprintf(
 				`{"ID":%d,"NAME":"%s"}`, d.counter, gofakeit.Name(),
 			),
@@ -92,7 +91,7 @@ func beforeTest(_ *testing.T, cfg map[string]string) func(t *testing.T) {
 		table := randomIdentifier(t)
 		t.Logf("table under test: %v", table)
 
-		cfg[config.KeyTable] = table
+		cfg[config.ConfigTable] = table
 
 		err := prepareData(t, cfg)
 		if err != nil {
@@ -103,17 +102,17 @@ func beforeTest(_ *testing.T, cfg map[string]string) func(t *testing.T) {
 
 func afterTest(_ *testing.T, cfg map[string]string) func(t *testing.T) {
 	return func(t *testing.T) {
-		db, err := sql.Open("go_ibm_db", cfg[config.KeyConnection])
+		db, err := sql.Open("go_ibm_db", cfg[config.ConfigConnection])
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		_, err = db.Exec(fmt.Sprintf(queryDropTestTable, cfg[config.KeyTable]))
+		_, err = db.Exec(fmt.Sprintf(queryDropTestTable, cfg[config.ConfigTable]))
 		if err != nil {
 			t.Logf("drop test table: %v", err)
 		}
 
-		rows, err := db.Query(fmt.Sprintf(queryFindTrackingTableName, cfg[config.KeyTable]))
+		rows, err := db.Query(fmt.Sprintf(queryFindTrackingTableName, cfg[config.ConfigTable]))
 		if err != nil {
 			t.Errorf("find tracking table: %v", err)
 		}
@@ -153,19 +152,19 @@ func prepareConfig(t *testing.T) map[string]string {
 	}
 
 	return map[string]string{
-		config.KeyConnection: conn,
-		s.KeyPrimaryKeys:     "ID",
-		s.KeyOrderingColumn:  "ID",
+		config.ConfigTable:          conn,
+		config.ConfigPrimaryKeys:    "ID",
+		config.ConfigOrderingColumn: "ID",
 	}
 }
 
 func prepareData(_ *testing.T, cfg map[string]string) error {
-	db, err := sql.Open("go_ibm_db", cfg[config.KeyConnection])
+	db, err := sql.Open("go_ibm_db", cfg[config.ConfigConnection])
 	if err != nil {
 		return err
 	}
 
-	_, err = db.Exec(fmt.Sprintf(queryCreateTestTable, cfg[config.KeyTable]))
+	_, err = db.Exec(fmt.Sprintf(queryCreateTestTable, cfg[config.ConfigTable]))
 	if err != nil {
 		return err
 	}

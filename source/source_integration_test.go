@@ -25,9 +25,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/conduitio-labs/conduit-connector-db2/source/config"
+	"github.com/conduitio/conduit-commons/opencdc"
 	sdk "github.com/conduitio/conduit-connector-sdk"
-
-	"github.com/conduitio-labs/conduit-connector-db2/config"
 )
 
 const (
@@ -89,14 +89,14 @@ func TestSource_Snapshot_Success(t *testing.T) {
 		t.Skip()
 	}
 
-	err = prepareData(ctx, cfg[config.KeyConnection], tableName)
+	err = prepareData(ctx, cfg[config.ConfigConnection], tableName)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	defer clearData(ctx, cfg[config.KeyConnection], cfg[config.KeyTable]) // nolint:errcheck,nolintlint
+	defer clearData(ctx, cfg[config.ConfigConnection], cfg[config.ConfigTable]) // nolint:errcheck,nolintlint
 
-	s := New()
+	s := NewSource()
 
 	err = s.Configure(ctx, cfg)
 	if err != nil {
@@ -116,8 +116,8 @@ func TestSource_Snapshot_Success(t *testing.T) {
 	}
 
 	// check right converting.
-	exceptedRecordPayload := sdk.Change{
-		After: sdk.RawData(`{"CL1":"varchar","CL10":"123","CL11":123.1223,"CL2":"c","CL3":"clob","CL4":"long varchar","CL5":"graphic","CL6":"long vargraphic","CL7":"vargraphic","CL8":5455,"CL9":2321,"ID":1}`), //nolint:lll// for comparing
+	exceptedRecordPayload := opencdc.Change{
+		After: opencdc.RawData(`{"CL1":"varchar","CL10":"123","CL11":123.1223,"CL2":"c","CL3":"clob","CL4":"long varchar","CL5":"graphic","CL6":"long vargraphic","CL7":"vargraphic","CL8":5455,"CL9":2321,"ID":1}`), //nolint:lll// for comparing
 	}
 
 	if !reflect.DeepEqual(r.Payload, exceptedRecordPayload) {
@@ -142,14 +142,14 @@ func TestSource_Snapshot_Continue(t *testing.T) {
 		t.Skip()
 	}
 
-	err = prepareData(ctx, cfg[config.KeyConnection], tableName)
+	err = prepareData(ctx, cfg[config.ConfigConnection], tableName)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	defer clearData(ctx, cfg[config.KeyConnection], cfg[config.KeyTable]) // nolint:errcheck,nolintlint
+	defer clearData(ctx, cfg[config.ConfigConnection], cfg[config.ConfigTable]) // nolint:errcheck,nolintlint
 
-	s := New()
+	s := NewSource()
 
 	err = s.Configure(ctx, cfg)
 	if err != nil {
@@ -168,7 +168,7 @@ func TestSource_Snapshot_Continue(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var wantedKey sdk.StructuredData
+	var wantedKey opencdc.StructuredData
 	wantedKey = map[string]interface{}{"ID": int32(1)}
 
 	if !reflect.DeepEqual(r.Key, wantedKey) {
@@ -215,14 +215,14 @@ func TestSource_Snapshot_Empty_Table(t *testing.T) {
 
 	ctx := context.Background()
 
-	err = prepareEmptyTable(ctx, cfg[config.KeyConnection], tableName)
+	err = prepareEmptyTable(ctx, cfg[config.ConfigConnection], tableName)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	defer clearData(ctx, cfg[config.KeyConnection], cfg[config.KeyTable]) // nolint:errcheck,nolintlint
+	defer clearData(ctx, cfg[config.ConfigConnection], cfg[config.ConfigTable]) // nolint:errcheck,nolintlint
 
-	s := New()
+	s := NewSource()
 
 	err = s.Configure(ctx, cfg)
 	if err != nil {
@@ -259,14 +259,14 @@ func TestSource_CDC(t *testing.T) {
 
 	ctx := context.Background()
 
-	err = prepareEmptyTable(ctx, cfg[config.KeyConnection], tableName)
+	err = prepareEmptyTable(ctx, cfg[config.ConfigConnection], tableName)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	defer clearData(ctx, cfg[config.KeyConnection], cfg[config.KeyTable]) // nolint:errcheck,nolintlint
+	defer clearData(ctx, cfg[config.ConfigConnection], cfg[config.ConfigTable]) // nolint:errcheck,nolintlint
 
-	s := New()
+	s := NewSource()
 
 	err = s.Configure(ctx, cfg)
 	if err != nil {
@@ -285,7 +285,7 @@ func TestSource_CDC(t *testing.T) {
 	}
 
 	// load data for cdc.
-	err = prepareCDCData(ctx, cfg[config.KeyConnection], cfg[config.KeyTable])
+	err = prepareCDCData(ctx, cfg[config.ConfigConnection], cfg[config.ConfigTable])
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -296,7 +296,7 @@ func TestSource_CDC(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if r.Operation != sdk.OperationCreate {
+	if r.Operation != opencdc.OperationCreate {
 		t.Fatal(errors.New("wrong operation"))
 	}
 
@@ -306,7 +306,7 @@ func TestSource_CDC(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if r.Operation != sdk.OperationUpdate {
+	if r.Operation != opencdc.OperationUpdate {
 		t.Fatal(errors.New("wrong operation"))
 	}
 
@@ -327,7 +327,7 @@ func TestSource_CDC(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if r.Operation != sdk.OperationDelete {
+	if r.Operation != opencdc.OperationDelete {
 		t.Fatal(errors.New("wrong operation"))
 	}
 
@@ -349,14 +349,14 @@ func TestSource_CDC_Empty_Table(t *testing.T) {
 
 	ctx := context.Background()
 
-	err = prepareEmptyTable(ctx, cfg[config.KeyConnection], tableName)
+	err = prepareEmptyTable(ctx, cfg[config.ConfigConnection], tableName)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	defer clearData(ctx, cfg[config.KeyConnection], cfg[config.KeyTable]) // nolint:errcheck,nolintlint
+	defer clearData(ctx, cfg[config.ConfigConnection], cfg[config.ConfigTable]) // nolint:errcheck,nolintlint
 
-	s := New()
+	s := NewSource()
 
 	err = s.Configure(ctx, cfg)
 	if err != nil {
@@ -399,16 +399,16 @@ func TestSource_Snapshot_Off(t *testing.T) {
 	}
 
 	// turn off snapshot
-	cfg[KeySnapshot] = "false"
+	cfg[config.ConfigSnapshot] = "false"
 
-	err = prepareData(ctx, cfg[config.KeyConnection], tableName)
+	err = prepareData(ctx, cfg[config.ConfigConnection], tableName)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	defer clearData(ctx, cfg[config.KeyConnection], cfg[config.KeyTable]) // nolint:errcheck,nolintlint
+	defer clearData(ctx, cfg[config.ConfigConnection], cfg[config.ConfigTable]) // nolint:errcheck,nolintlint
 
-	s := New()
+	s := NewSource()
 
 	err = s.Configure(ctx, cfg)
 	if err != nil {
@@ -422,7 +422,7 @@ func TestSource_Snapshot_Off(t *testing.T) {
 	}
 
 	// load data for cdc.
-	err = prepareCDCData(ctx, cfg[config.KeyConnection], cfg[config.KeyTable])
+	err = prepareCDCData(ctx, cfg[config.ConfigConnection], cfg[config.ConfigTable])
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -433,7 +433,7 @@ func TestSource_Snapshot_Off(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !reflect.DeepEqual(r.Operation, sdk.OperationCreate) {
+	if !reflect.DeepEqual(r.Operation, opencdc.OperationCreate) {
 		t.Fatal(errors.New("not wanted type"))
 	}
 
@@ -451,9 +451,9 @@ func prepareConfig(tableName string) (map[string]string, error) {
 	}
 
 	return map[string]string{
-		config.KeyConnection: connection,
-		config.KeyTable:      tableName,
-		KeyOrderingColumn:    "ID",
+		config.ConfigConnection:     connection,
+		config.ConfigTable:          tableName,
+		config.ConfigOrderingColumn: "ID",
 	}, nil
 }
 

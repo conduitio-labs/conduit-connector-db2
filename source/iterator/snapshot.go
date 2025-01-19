@@ -20,12 +20,12 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/conduitio-labs/conduit-connector-db2/coltypes"
+	"github.com/conduitio-labs/conduit-connector-db2/source/position"
+	"github.com/conduitio/conduit-commons/opencdc"
 	sdk "github.com/conduitio/conduit-connector-sdk"
 	"github.com/huandu/go-sqlbuilder"
 	"github.com/jmoiron/sqlx"
-
-	"github.com/conduitio-labs/conduit-connector-db2/coltypes"
-	"github.com/conduitio-labs/conduit-connector-db2/source/position"
 )
 
 // snapshotIterator - iterator which get snapshot data.
@@ -129,19 +129,19 @@ func (i *snapshotIterator) HasNext(ctx context.Context) (bool, error) {
 }
 
 // Next get new record.
-func (i *snapshotIterator) Next(ctx context.Context) (sdk.Record, error) {
+func (i *snapshotIterator) Next(ctx context.Context) (opencdc.Record, error) {
 	row := make(map[string]any)
 	if err := i.rows.MapScan(row); err != nil {
-		return sdk.Record{}, fmt.Errorf("scan rows: %w", err)
+		return opencdc.Record{}, fmt.Errorf("scan rows: %w", err)
 	}
 
 	transformedRow, err := coltypes.TransformRow(ctx, row, i.columnTypes)
 	if err != nil {
-		return sdk.Record{}, fmt.Errorf("transform row column types: %w", err)
+		return opencdc.Record{}, fmt.Errorf("transform row column types: %w", err)
 	}
 
 	if _, ok := transformedRow[i.orderingColumn]; !ok {
-		return sdk.Record{}, ErrNoOrderingColumn
+		return opencdc.Record{}, ErrNoOrderingColumn
 	}
 
 	pos := position.Position{
@@ -153,13 +153,13 @@ func (i *snapshotIterator) Next(ctx context.Context) (sdk.Record, error) {
 
 	sdkPos, err := pos.ConvertToSDKPosition()
 	if err != nil {
-		return sdk.Record{}, fmt.Errorf("convert position %w", err)
+		return opencdc.Record{}, fmt.Errorf("convert position %w", err)
 	}
 
 	keysMap := make(map[string]any)
 	for _, val := range i.keys {
 		if _, ok := transformedRow[val]; !ok {
-			return sdk.Record{}, fmt.Errorf("key %v, %w", val, ErrNoKey)
+			return opencdc.Record{}, fmt.Errorf("key %v, %w", val, ErrNoKey)
 		}
 
 		keysMap[val] = transformedRow[val]
@@ -167,19 +167,19 @@ func (i *snapshotIterator) Next(ctx context.Context) (sdk.Record, error) {
 
 	transformedRowBytes, err := json.Marshal(transformedRow)
 	if err != nil {
-		return sdk.Record{}, fmt.Errorf("marshal row: %w", err)
+		return opencdc.Record{}, fmt.Errorf("marshal row: %w", err)
 	}
 
 	i.position = &pos
 
-	metadata := sdk.Metadata(map[string]string{metadataTable: i.table})
+	metadata := opencdc.Metadata(map[string]string{metadataTable: i.table})
 	metadata.SetCreatedAt(time.Now())
 
 	return sdk.Util.Source.NewRecordSnapshot(
 			sdkPos,
 			metadata,
-			sdk.StructuredData(keysMap),
-			sdk.RawData(transformedRowBytes)),
+			opencdc.StructuredData(keysMap),
+			opencdc.RawData(transformedRowBytes)),
 		nil
 }
 

@@ -21,12 +21,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/conduitio-labs/conduit-connector-db2/coltypes"
+	"github.com/conduitio-labs/conduit-connector-db2/source/position"
+	"github.com/conduitio/conduit-commons/opencdc"
 	sdk "github.com/conduitio/conduit-connector-sdk"
 	"github.com/huandu/go-sqlbuilder"
 	"github.com/jmoiron/sqlx"
-
-	"github.com/conduitio-labs/conduit-connector-db2/coltypes"
-	"github.com/conduitio-labs/conduit-connector-db2/source/position"
 )
 
 const (
@@ -143,25 +143,25 @@ func (i *cdcIterator) HasNext(ctx context.Context) (bool, error) {
 }
 
 // Next get new record.
-func (i *cdcIterator) Next(ctx context.Context) (sdk.Record, error) {
+func (i *cdcIterator) Next(ctx context.Context) (opencdc.Record, error) {
 	row := make(map[string]any)
 	if err := i.rows.MapScan(row); err != nil {
-		return sdk.Record{}, fmt.Errorf("scan rows: %w", err)
+		return opencdc.Record{}, fmt.Errorf("scan rows: %w", err)
 	}
 
 	transformedRow, err := coltypes.TransformRow(ctx, row, i.columnTypes)
 	if err != nil {
-		return sdk.Record{}, fmt.Errorf("transform row column types: %w", err)
+		return opencdc.Record{}, fmt.Errorf("transform row column types: %w", err)
 	}
 
 	id, ok := transformedRow[columnTrackingID].(int32)
 	if !ok {
-		return sdk.Record{}, ErrWrongTrackingIDType
+		return opencdc.Record{}, ErrWrongTrackingIDType
 	}
 
 	operationTypeBt, ok := transformedRow[columnOperationType].([]byte)
 	if !ok {
-		return sdk.Record{}, ErrWrongTrackingOperatorType
+		return opencdc.Record{}, ErrWrongTrackingOperatorType
 	}
 
 	operationType := string(operationTypeBt)
@@ -174,13 +174,13 @@ func (i *cdcIterator) Next(ctx context.Context) (sdk.Record, error) {
 
 	convertedPosition, err := pos.ConvertToSDKPosition()
 	if err != nil {
-		return sdk.Record{}, fmt.Errorf("convert position %w", err)
+		return opencdc.Record{}, fmt.Errorf("convert position %w", err)
 	}
 
 	keysMap := make(map[string]any)
 	for _, val := range i.keys {
 		if _, ok := transformedRow[val]; !ok {
-			return sdk.Record{}, fmt.Errorf("key %v, %w", val, ErrNoKey)
+			return opencdc.Record{}, fmt.Errorf("key %v, %w", val, ErrNoKey)
 		}
 
 		keysMap[val] = transformedRow[val]
@@ -193,26 +193,26 @@ func (i *cdcIterator) Next(ctx context.Context) (sdk.Record, error) {
 
 	transformedRowBytes, err := json.Marshal(transformedRow)
 	if err != nil {
-		return sdk.Record{}, fmt.Errorf("marshal row: %w", err)
+		return opencdc.Record{}, fmt.Errorf("marshal row: %w", err)
 	}
 
 	i.position = &pos
 
-	metadata := sdk.Metadata(map[string]string{metadataTable: i.table})
+	metadata := opencdc.Metadata(map[string]string{metadataTable: i.table})
 	metadata.SetCreatedAt(time.Now())
 
 	switch actionType(operationType) {
 	case ActionInsert:
 		return sdk.Util.Source.NewRecordCreate(convertedPosition, metadata,
-			sdk.StructuredData(keysMap), sdk.RawData(transformedRowBytes)), nil
+			opencdc.StructuredData(keysMap), opencdc.RawData(transformedRowBytes)), nil
 	case ActionUpdate:
 		return sdk.Util.Source.NewRecordUpdate(convertedPosition, metadata,
-			sdk.StructuredData(keysMap), nil, sdk.RawData(transformedRowBytes)), nil
+			opencdc.StructuredData(keysMap), nil, opencdc.RawData(transformedRowBytes)), nil
 	case ActionDelete:
 		return sdk.Util.Source.NewRecordDelete(convertedPosition, metadata,
-			sdk.StructuredData(keysMap)), nil
+			opencdc.StructuredData(keysMap), nil), nil
 	default:
-		return sdk.Record{}, ErrUnknownOperatorType
+		return opencdc.Record{}, ErrUnknownOperatorType
 	}
 }
 

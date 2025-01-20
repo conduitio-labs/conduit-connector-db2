@@ -152,7 +152,7 @@ func prepareConfig(t *testing.T) map[string]string {
 	}
 
 	return map[string]string{
-		config.ConfigTable:          conn,
+		config.ConfigConnection:     conn,
 		config.ConfigPrimaryKeys:    "ID",
 		config.ConfigOrderingColumn: "ID",
 	}

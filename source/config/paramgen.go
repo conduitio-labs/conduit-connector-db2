@@ -48,7 +48,6 @@ func (Config) Parameters() map[string]config.Parameter {
 			Type:        config.ParameterTypeString,
 			Validations: []config.Validation{
 				config.ValidationRequired{},
-				config.ValidationLessThan{V: 129},
 			},
 		},
 		ConfigPrimaryKeys: {
@@ -69,7 +68,6 @@ func (Config) Parameters() map[string]config.Parameter {
 			Type:        config.ParameterTypeString,
 			Validations: []config.Validation{
 				config.ValidationRequired{},
-				config.ValidationLessThan{V: 129},
 			},
 		},
 	}

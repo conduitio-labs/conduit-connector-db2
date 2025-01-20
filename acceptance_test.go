@@ -66,16 +66,26 @@ func (d *driver) GenerateRecord(_ *testing.T, operation opencdc.Operation) openc
 
 //nolint:paralleltest // we don't need paralleltest for the Acceptance tests.
 func TestAcceptance(t *testing.T) {
-	cfg := prepareConfig(t)
+	connection := getConnection(t)
+
+	srcConfig := map[string]string{
+		config.ConfigConnection:     connection,
+		config.ConfigPrimaryKeys:    "ID",
+		config.ConfigOrderingColumn: "ID",
+	}
+
+	destConfig := map[string]string{
+		config.ConfigConnection: connection,
+	}
 
 	sdk.AcceptanceTest(t, &driver{
 		ConfigurableAcceptanceTestDriver: sdk.ConfigurableAcceptanceTestDriver{
 			Config: sdk.ConfigurableAcceptanceTestDriverConfig{
 				Connector:         Connector,
-				SourceConfig:      cfg,
-				DestinationConfig: cfg,
-				BeforeTest:        beforeTest(t, cfg),
-				AfterTest:         afterTest(t, cfg),
+				SourceConfig:      srcConfig,
+				DestinationConfig: destConfig,
+				BeforeTest:        beforeTest(t, srcConfig, destConfig),
+				AfterTest:         afterTest(t, srcConfig),
 				GoleakOptions: []goleak.Option{
 					// imdb library leak.
 					goleak.IgnoreTopFunction("github.com/ibmdb/go_ibm_db/api._Cfunc_SQLDisconnect"),
@@ -86,14 +96,15 @@ func TestAcceptance(t *testing.T) {
 }
 
 // beforeTest creates new table before each test.
-func beforeTest(_ *testing.T, cfg map[string]string) func(t *testing.T) {
+func beforeTest(_ *testing.T, srcCfg map[string]string, destCfg map[string]string) func(t *testing.T) {
 	return func(t *testing.T) {
 		table := randomIdentifier(t)
 		t.Logf("table under test: %v", table)
 
-		cfg[config.ConfigTable] = table
+		srcCfg[config.ConfigTable] = table
+		destCfg[config.ConfigTable] = table
 
-		err := prepareData(t, cfg)
+		err := prepareData(t, srcCfg)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -143,19 +154,15 @@ func afterTest(_ *testing.T, cfg map[string]string) func(t *testing.T) {
 	}
 }
 
-func prepareConfig(t *testing.T) map[string]string {
+func getConnection(t *testing.T) string {
 	conn := os.Getenv("DB2_CONNECTION")
 	if conn == "" {
 		t.Skip("DB2_CONNECTION env var must be set")
 
-		return nil
+		return ""
 	}
 
-	return map[string]string{
-		config.ConfigConnection:     conn,
-		config.ConfigPrimaryKeys:    "ID",
-		config.ConfigOrderingColumn: "ID",
-	}
+	return conn
 }
 
 func prepareData(_ *testing.T, cfg map[string]string) error {

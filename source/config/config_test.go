@@ -73,7 +73,7 @@ func TestValidateConfig(t *testing.T) {
 				BatchSize:      defaultBatchSize,
 			},
 			wantErr: fmt.Errorf(
-				`error validating "columns": column %q length must be less than or equal to 128 characters`, testLongString,
+				`column %q length must be less than or equal to 128 characters`, testLongString,
 			),
 		},
 		{
@@ -87,7 +87,7 @@ func TestValidateConfig(t *testing.T) {
 				BatchSize:      defaultBatchSize,
 			},
 			wantErr: fmt.Errorf(
-				`error validating "primaryKeys": primaryKey %q length must be less than or equal to 128 characters`, testLongString,
+				`primaryKey %q length must be less than or equal to 128 characters`, testLongString,
 			),
 		},
 		{
@@ -100,7 +100,7 @@ func TestValidateConfig(t *testing.T) {
 				Columns:        []string{"id", "name"},
 				BatchSize:      defaultBatchSize,
 			},
-			wantErr: fmt.Errorf(`error validating "columns": columns must contain orderingColumn "updated_at"`),
+			wantErr: fmt.Errorf(`columns must contain orderingColumn "updated_at"`),
 		},
 	}
 

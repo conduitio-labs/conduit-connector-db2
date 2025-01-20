@@ -28,7 +28,7 @@ type Config struct {
 	common.Configuration
 
 	// OrderingColumn is a name of a column that the connector will use for ordering rows.
-	OrderingColumn string `json:"orderingColumn" validate:"required,lt=129"`
+	OrderingColumn string `json:"orderingColumn" validate:"required"`
 	// Columns  list of column names that should be included in each Record's payload.
 	Columns []string `json:"columns"`
 	// BatchSize is a size of rows batch.
@@ -66,20 +66,31 @@ func (c Config) Init() Config {
 
 // Validate executes manual validations beyond what is defined in struct tags.
 func (c *Config) Validate() error {
+	// Validate common configuration
+	err := c.Configuration.Validate()
+	if err != nil {
+		return err
+	}
+
+	// Validate OrderingColumn
+	if len(c.OrderingColumn) > common.MaxConfigStringLength {
+		return common.NewLessThanError(ConfigOrderingColumn, common.MaxConfigStringLength)
+	}
+
 	// Validate Columns
 	if len(c.Columns) > 0 {
 		// Check if Columns contain OrderingColumn when specified
 		hasOrderingColumn := false
 		for _, col := range c.Columns {
 			if len(col) > 128 {
-				return fmt.Errorf(`error validating "columns": column %q length must be less than or equal to 128 characters`, col)
+				return fmt.Errorf(`column %q length must be less than or equal to 128 characters`, col)
 			}
 			if col == c.OrderingColumn {
 				hasOrderingColumn = true
 			}
 		}
 		if !hasOrderingColumn {
-			return fmt.Errorf(`error validating "columns": columns must contain orderingColumn %q`, c.OrderingColumn)
+			return fmt.Errorf(`columns must contain orderingColumn %q`, c.OrderingColumn)
 		}
 	}
 
@@ -87,7 +98,7 @@ func (c *Config) Validate() error {
 	for _, key := range c.PrimaryKeys {
 		if len(key) > 128 {
 			return fmt.Errorf(
-				`error validating "primaryKeys": primaryKey %q length must be less than or equal to 128 characters`, key)
+				`primaryKey %q length must be less than or equal to 128 characters`, key)
 		}
 	}
 

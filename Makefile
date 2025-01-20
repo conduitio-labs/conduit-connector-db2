@@ -6,7 +6,12 @@ build:
 
 .PHONY: test
 test:
-	go test $(GOTEST_FLAGS) -race ./...
+	go list -f "{{.Module.Version}}" github.com/ibmdb/go_ibm_db/installer | xargs -tI % go run github.com/ibmdb/go_ibm_db/installer@%
+	# run required docker containers, execute integration tests, stop containers after tests
+	docker compose -f test/docker-compose.yml up --quiet-pull -d --wait
+	go test $(GOTEST_FLAGS) -race ./...; ret=$$?; \
+		docker compose -f test/docker-compose.yml down --volumes; \
+		exit $$ret
 
 .PHONY: generate
 generate:

@@ -1,4 +1,4 @@
-DB2_STARTUP_TIMEOUT ?= 50
+VERSION=$(shell git describe --tags --dirty --always)
 
 .PHONY: build
 build:
@@ -6,12 +6,7 @@ build:
 
 .PHONY: test
 test:
-	go list -f "{{.Module.Version}}" github.com/ibmdb/go_ibm_db/installer | xargs -tI % go run github.com/ibmdb/go_ibm_db/installer@%
-	# run required docker containers, execute integration tests, stop containers after tests
-	docker compose -f test/docker-compose.yml up --quiet-pull -d --wait
-	go test $(GOTEST_FLAGS) -race ./...; ret=$$?; \
-		docker compose -f test/docker-compose.yml down --volumes; \
-		exit $$ret
+	go test $(GOTEST_FLAGS) -race ./...
 
 .PHONY: generate
 generate:

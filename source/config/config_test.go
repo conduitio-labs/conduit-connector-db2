@@ -135,6 +135,7 @@ func TestConfigInit(t *testing.T) {
 			input: Config{
 				Configuration: common.Configuration{
 					Connection: testConnection,
+					Table:      testTableName,
 				},
 				OrderingColumn: "updated_at",
 				Columns:        []string{"id", "name", "updated_at"},
@@ -144,6 +145,7 @@ func TestConfigInit(t *testing.T) {
 			expected: Config{
 				Configuration: common.Configuration{
 					Connection: testConnection,
+					Table:      "TEST_TABLE",
 				},
 				OrderingColumn: "UPDATED_AT",
 				Columns:        []string{"ID", "NAME", "UPDATED_AT"},
@@ -190,6 +192,7 @@ func TestConfigInit(t *testing.T) {
 
 			is.Equal(result.BatchSize, tt.expected.BatchSize)
 			is.Equal(result.Connection, tt.expected.Connection)
+			is.Equal(result.Table, tt.expected.Table)
 		})
 	}
 }

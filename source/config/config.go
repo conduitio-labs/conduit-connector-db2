@@ -39,11 +39,11 @@ type Config struct {
 	Snapshot bool `json:"snapshot" default:"true"`
 }
 
-// Init sets uppercase "orderingColumn", "columns" and "primaryKeys".
+// Init initializes common configuration and sets uppercase "orderingColumn", "columns", and "primaryKeys".
 func (c Config) Init() Config {
+	c.Configuration = c.Configuration.Init()
 	c.OrderingColumn = strings.ToUpper(c.OrderingColumn)
 
-	// Convert columns to uppercase
 	if len(c.Columns) > 0 {
 		upperColumns := make([]string, len(c.Columns))
 		for i, col := range c.Columns {
@@ -52,7 +52,6 @@ func (c Config) Init() Config {
 		c.Columns = upperColumns
 	}
 
-	// Convert primary keys to uppercase
 	if len(c.PrimaryKeys) > 0 {
 		upperKeys := make([]string, len(c.PrimaryKeys))
 		for i, key := range c.PrimaryKeys {
@@ -66,18 +65,18 @@ func (c Config) Init() Config {
 
 // Validate executes manual validations beyond what is defined in struct tags.
 func (c *Config) Validate() error {
-	// Validate common configuration
+	// Validate common configuration.
 	err := c.Configuration.Validate()
 	if err != nil {
 		return err
 	}
 
-	// Validate OrderingColumn
+	// Validate OrderingColumn.
 	if len(c.OrderingColumn) > common.MaxConfigStringLength {
 		return common.NewLessThanError(ConfigOrderingColumn, common.MaxConfigStringLength)
 	}
 
-	// Validate Columns
+	// Validate Columns.
 	if len(c.Columns) > 0 {
 		// Check if Columns contain OrderingColumn when specified
 		hasOrderingColumn := false
@@ -94,7 +93,7 @@ func (c *Config) Validate() error {
 		}
 	}
 
-	// Validate PrimaryKeys
+	// Validate PrimaryKeys.
 	for _, key := range c.PrimaryKeys {
 		if len(key) > 128 {
 			return fmt.Errorf(

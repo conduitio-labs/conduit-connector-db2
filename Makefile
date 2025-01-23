@@ -1,4 +1,4 @@
-DB2_STARTUP_TIMEOUT ?= 50
+VERSION=$(shell git describe --tags --dirty --always)
 
 .PHONY: build
 build:
@@ -13,17 +13,20 @@ test:
 		docker compose -f test/docker-compose.yml down --volumes; \
 		exit $$ret
 
+.PHONY: generate
+generate:
+	go generate ./...
+
 .PHONY: lint
 lint:
 	golangci-lint run -v
-
-.PHONY: mockgen
-mockgen:
-	mockgen -package mock -source destination/interface.go -destination destination/mock/destination.go
-	mockgen -package mock -source source/interface.go -destination source/mock/iterator.go
 
 .PHONY: install-tools
 install-tools:
 	@echo Installing tools from tools.go
 	@go list -e -f '{{ join .Imports "\n" }}' tools.go | xargs -I % go list -f "%@{{.Module.Version}}" % | xargs -tI % go install %
 	@go mod tidy
+
+.PHONY: fmt
+fmt:
+	gofumpt -l -w .

@@ -12,18 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package source
+package common
 
-import (
-	"context"
+import "fmt"
 
-	"github.com/conduitio/conduit-commons/opencdc"
-)
+type LessThanError struct {
+	fieldName string
+	value     int
+}
 
-// Iterator interface.
-type Iterator interface {
-	HasNext(ctx context.Context) (bool, error)
-	Next(ctx context.Context) (opencdc.Record, error)
-	Stop() error
-	Ack(ctx context.Context, rp opencdc.Position) error
+func (e LessThanError) Error() string {
+	return fmt.Sprintf("%q value must be less than or equal to %d", e.fieldName, e.value)
+}
+
+func NewLessThanError(fieldName string, value int) LessThanError {
+	return LessThanError{fieldName: fieldName, value: value}
 }

@@ -21,12 +21,11 @@ import (
 	"reflect"
 	"testing"
 
-	sdk "github.com/conduitio/conduit-connector-sdk"
-	"github.com/golang/mock/gomock"
-
-	"github.com/conduitio-labs/conduit-connector-db2/config"
+	"github.com/conduitio-labs/conduit-connector-db2/source/config"
 	"github.com/conduitio-labs/conduit-connector-db2/source/mock"
 	"github.com/conduitio-labs/conduit-connector-db2/source/position"
+	"github.com/conduitio/conduit-commons/opencdc"
+	"go.uber.org/mock/gomock"
 )
 
 func TestSource_Configure(t *testing.T) {
@@ -40,43 +39,43 @@ func TestSource_Configure(t *testing.T) {
 		{
 			name: "success, required and default fields",
 			cfg: map[string]string{
-				config.KeyConnection: "HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=pwd",
-				config.KeyTable:      "CLIENTS",
-				KeyColumns:           "",
-				KeyOrderingColumn:    "ID",
-				KeyBatchSize:         "",
+				config.ConfigConnection:     "HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=pwd",
+				config.ConfigTable:          "CLIENTS",
+				config.ConfigColumns:        "",
+				config.ConfigOrderingColumn: "ID",
+				config.ConfigBatchSize:      "",
 			},
 			wantErr: false,
 		},
 		{
 			name: "success, custom batch size",
 			cfg: map[string]string{
-				config.KeyConnection: "HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=pwd",
-				config.KeyTable:      "CLIENTS",
-				KeyColumns:           "",
-				KeyOrderingColumn:    "ID",
-				KeyBatchSize:         "50",
+				config.ConfigConnection:     "HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=pwd",
+				config.ConfigTable:          "CLIENTS",
+				config.ConfigColumns:        "",
+				config.ConfigOrderingColumn: "ID",
+				config.ConfigBatchSize:      "50",
 			},
 			wantErr: false,
 		},
 		{
 			name: "success, custom columns",
 			cfg: map[string]string{
-				config.KeyConnection: "HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=pwd",
-				config.KeyTable:      "CLIENTS",
-				KeyColumns:           "ID,NAME",
-				KeyOrderingColumn:    "ID",
-				KeyBatchSize:         "50",
+				config.ConfigConnection:     "HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=pwd",
+				config.ConfigTable:          "CLIENTS",
+				config.ConfigColumns:        "ID,NAME",
+				config.ConfigOrderingColumn: "ID",
+				config.ConfigBatchSize:      "50",
 			},
 			wantErr: false,
 		},
 		{
 			name: "failed, missed ordering column",
 			cfg: map[string]string{
-				config.KeyConnection: "HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=pwd",
-				config.KeyTable:      "CLIENTS",
-				KeyColumns:           "ID,NAME",
-				KeyBatchSize:         "50",
+				config.ConfigConnection: "HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=pwd",
+				config.ConfigTable:      "CLIENTS",
+				config.ConfigColumns:    "ID,NAME",
+				config.ConfigBatchSize:  "50",
 			},
 			wantErr: true,
 		},
@@ -99,7 +98,7 @@ func TestSource_Read(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		ctx := context.Background()
 
-		st := make(sdk.StructuredData)
+		st := make(opencdc.StructuredData)
 		st["key"] = "value"
 
 		pos, _ := json.Marshal(position.Position{
@@ -108,11 +107,11 @@ func TestSource_Read(t *testing.T) {
 			CDCLastID:                0,
 		})
 
-		record := sdk.Record{
+		record := opencdc.Record{
 			Position: pos,
 			Metadata: nil,
 			Key:      st,
-			Payload:  sdk.Change{After: st},
+			Payload:  opencdc.Change{After: st},
 		}
 
 		it := mock.NewMockIterator(ctrl)
@@ -156,7 +155,7 @@ func TestSource_Read(t *testing.T) {
 
 		it := mock.NewMockIterator(ctrl)
 		it.EXPECT().HasNext(ctx).Return(true, nil)
-		it.EXPECT().Next(ctx).Return(sdk.Record{}, errors.New("key is not exist"))
+		it.EXPECT().Next(ctx).Return(opencdc.Record{}, errors.New("key is not exist"))
 
 		s := Source{
 			iterator: it,

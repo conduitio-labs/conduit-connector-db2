@@ -18,83 +18,60 @@ import (
 	"context"
 	"fmt"
 
-	sdk "github.com/conduitio/conduit-connector-sdk"
-	"github.com/jmoiron/sqlx"
-
-	_ "github.com/ibmdb/go_ibm_db" //nolint:revive,nolintlint
-
-	"github.com/conduitio-labs/conduit-connector-db2/config"
+	"github.com/conduitio-labs/conduit-connector-db2/source/config"
 	"github.com/conduitio-labs/conduit-connector-db2/source/iterator"
+	commonsConfig "github.com/conduitio/conduit-commons/config"
+	"github.com/conduitio/conduit-commons/lang"
+	"github.com/conduitio/conduit-commons/opencdc"
+	sdk "github.com/conduitio/conduit-connector-sdk"
+	_ "github.com/ibmdb/go_ibm_db" //nolint:revive,nolintlint
+	"github.com/jmoiron/sqlx"
 )
+
+//go:generate mockgen -package mock -source interface.go -destination mock/iterator.go
 
 // Source connector.
 type Source struct {
 	sdk.UnimplementedSource
 
-	config   Config
+	config   config.Config
 	iterator Iterator
 }
 
-// New initialises a new source.
-func New() sdk.Source {
-	return &Source{}
+// NewSource initialises a new source.
+func NewSource() sdk.Source {
+	return sdk.SourceWithMiddleware(&Source{}, sdk.DefaultSourceMiddleware(
+		// disable schema extraction by default, because the source produces raw payload data
+		sdk.SourceWithSchemaExtractionConfig{
+			PayloadEnabled: lang.Ptr(false),
+		},
+	)...)
 }
 
-// Parameters returns a map of named sdk.Parameters that describe how to configure the Source.
-func (s *Source) Parameters() map[string]sdk.Parameter {
-	return map[string]sdk.Parameter{
-		config.KeyConnection: {
-			Description: "Connection string to DB2",
-			Required:    true,
-			Default:     "",
-		},
-		config.KeyTable: {
-			Description: "A name of the table that the connector should write to.",
-			Required:    true,
-			Default:     "",
-		},
-		KeyPrimaryKeys: {
-			Description: "Names of columns that connector will use for create record key",
-			Required:    false,
-			Default:     "",
-		},
-		KeyOrderingColumn: {
-			Description: "Column used for ordering rows",
-			Required:    true,
-			Default:     "",
-		},
-		KeyColumns: {
-			Description: "The list of column names that should be included in each Record's payload",
-			Required:    false,
-			Default:     "",
-		},
-		KeySnapshot: {
-			Description: "Whether or not the plugin will take a snapshot of the entire table before starting ",
-			Required:    false,
-			Default:     "true",
-		},
-		KeyBatchSize: {
-			Description: "The size of rows batch",
-			Required:    false,
-			Default:     "1000",
-		},
-	}
+// Parameters returns a map of named config.Parameters that describe how to configure the Source.
+func (s *Source) Parameters() commonsConfig.Parameters {
+	return s.config.Parameters()
 }
 
 // Configure parses and stores configurations, returns an error in case of invalid configuration.
-func (s *Source) Configure(_ context.Context, cfgRaw map[string]string) error {
-	cfg, err := Parse(cfgRaw)
+func (s *Source) Configure(ctx context.Context, cfgRaw commonsConfig.Config) error {
+	err := sdk.Util.ParseConfig(ctx, cfgRaw, &s.config, NewSource().Parameters())
 	if err != nil {
-		return err
+		return err //nolint: wrapcheck // not needed here
 	}
 
-	s.config = cfg
+	s.config = s.config.Init()
+
+	err = s.config.Validate()
+	if err != nil {
+		return fmt.Errorf("error validating configuration: %w", err)
+	}
 
 	return nil
 }
 
 // Open prepare the plugin to start sending records from the given position.
-func (s *Source) Open(ctx context.Context, rp sdk.Position) error {
+func (s *Source) Open(ctx context.Context, rp opencdc.Position) error {
 	db, err := sqlx.Open("go_ibm_db", s.config.Connection)
 	if err != nil {
 		return err
@@ -122,19 +99,19 @@ func (s *Source) Open(ctx context.Context, rp sdk.Position) error {
 }
 
 // Read gets the next object from the db2.
-func (s *Source) Read(ctx context.Context) (sdk.Record, error) {
+func (s *Source) Read(ctx context.Context) (opencdc.Record, error) {
 	hasNext, err := s.iterator.HasNext(ctx)
 	if err != nil {
-		return sdk.Record{}, fmt.Errorf("source has next: %w", err)
+		return opencdc.Record{}, fmt.Errorf("source has next: %w", err)
 	}
 
 	if !hasNext {
-		return sdk.Record{}, sdk.ErrBackoffRetry
+		return opencdc.Record{}, sdk.ErrBackoffRetry
 	}
 
 	r, err := s.iterator.Next(ctx)
 	if err != nil {
-		return sdk.Record{}, fmt.Errorf("source next: %w", err)
+		return opencdc.Record{}, fmt.Errorf("source next: %w", err)
 	}
 
 	return r, nil
@@ -153,6 +130,6 @@ func (s *Source) Teardown(context.Context) error {
 }
 
 // Ack check if record with position was recorded.
-func (s *Source) Ack(ctx context.Context, p sdk.Position) error {
+func (s *Source) Ack(ctx context.Context, p opencdc.Position) error {
 	return s.iterator.Ack(ctx, p)
 }

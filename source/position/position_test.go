@@ -19,7 +19,7 @@ import (
 	"errors"
 	"testing"
 
-	sdk "github.com/conduitio/conduit-connector-sdk"
+	"github.com/conduitio/conduit-commons/opencdc"
 )
 
 func TestParseSDKPosition(t *testing.T) {
@@ -43,19 +43,19 @@ func TestParseSDKPosition(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		in          sdk.Position
+		in          opencdc.Position
 		want        Position
 		wantErr     bool
 		expectedErr string
 	}{
 		{
 			name: "valid position",
-			in:   sdk.Position(snapshotPosBytes),
+			in:   opencdc.Position(snapshotPosBytes),
 			want: snapshotPos,
 		},
 		{
 			name:        "unknown iterator type",
-			in:          sdk.Position(wrongPosBytes),
+			in:          opencdc.Position(wrongPosBytes),
 			wantErr:     true,
 			expectedErr: errors.New("unknown iterator type : i").Error(),
 		},

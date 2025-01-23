@@ -19,51 +19,47 @@ import (
 	"database/sql"
 	"fmt"
 
-	sdk "github.com/conduitio/conduit-connector-sdk"
-
-	"github.com/conduitio-labs/conduit-connector-db2/config"
+	"github.com/conduitio-labs/conduit-connector-db2/common"
 	"github.com/conduitio-labs/conduit-connector-db2/destination/writer"
-
+	commonsConfig "github.com/conduitio/conduit-commons/config"
+	"github.com/conduitio/conduit-commons/opencdc"
+	sdk "github.com/conduitio/conduit-connector-sdk"
 	_ "github.com/ibmdb/go_ibm_db" //nolint:revive,nolintlint
 )
+
+//go:generate mockgen -package mock -source interface.go -destination mock/destination.go
 
 // Destination DB2 Connector persists records to a db2 database.
 type Destination struct {
 	sdk.UnimplementedDestination
 
 	writer Writer
-	config config.Config
+	config common.Configuration
 }
 
-// New creates new instance of the Destination.
-func New() sdk.Destination {
-	return &Destination{}
+// NewDestination creates new instance of the Destination.
+func NewDestination() sdk.Destination {
+	return sdk.DestinationWithMiddleware(&Destination{}, sdk.DefaultDestinationMiddleware()...)
 }
 
-// Parameters returns a map of named sdk.Parameters that describe how to configure the Destination.
-func (d *Destination) Parameters() map[string]sdk.Parameter {
-	return map[string]sdk.Parameter{
-		config.KeyConnection: {
-			Description: "Connection string to DB2",
-			Required:    true,
-			Default:     "",
-		},
-		config.KeyTable: {
-			Description: "Name of the table that the connector should write to.",
-			Required:    true,
-			Default:     "",
-		},
-	}
+// Parameters returns a map of named config.Parameters that describe how to configure the Destination.
+func (d *Destination) Parameters() commonsConfig.Parameters {
+	return d.config.Parameters()
 }
 
 // Configure parses and initializes the config.
-func (d *Destination) Configure(_ context.Context, cfg map[string]string) error {
-	configuration, err := config.Parse(cfg)
+func (d *Destination) Configure(ctx context.Context, cfg commonsConfig.Config) error {
+	err := sdk.Util.ParseConfig(ctx, cfg, &d.config, NewDestination().Parameters())
 	if err != nil {
-		return fmt.Errorf("parse config: %w", err)
+		return err //nolint: wrapcheck // not needed here
 	}
 
-	d.config = configuration
+	d.config = d.config.Init()
+
+	err = d.config.Validate()
+	if err != nil {
+		return fmt.Errorf("error validating configuration: %w", err)
+	}
 
 	return nil
 }
@@ -92,7 +88,7 @@ func (d *Destination) Open(ctx context.Context) error {
 }
 
 // Write writes a record into a Destination.
-func (d *Destination) Write(ctx context.Context, records []sdk.Record) (int, error) {
+func (d *Destination) Write(ctx context.Context, records []opencdc.Record) (int, error) {
 	for i, record := range records {
 		err := sdk.Util.Destination.Route(ctx, record,
 			d.writer.Insert,

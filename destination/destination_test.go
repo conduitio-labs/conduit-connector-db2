@@ -19,14 +19,12 @@ import (
 	"errors"
 	"testing"
 
-	sdk "github.com/conduitio/conduit-connector-sdk"
-	"github.com/golang/mock/gomock"
-
-	"github.com/matryer/is"
-
-	"github.com/conduitio-labs/conduit-connector-db2/config"
+	"github.com/conduitio-labs/conduit-connector-db2/common"
 	"github.com/conduitio-labs/conduit-connector-db2/destination/mock"
 	"github.com/conduitio-labs/conduit-connector-db2/destination/writer"
+	"github.com/conduitio/conduit-commons/opencdc"
+	"github.com/matryer/is"
+	"go.uber.org/mock/gomock"
 )
 
 func TestDestination_Configure(t *testing.T) {
@@ -45,8 +43,8 @@ func TestDestination_Configure(t *testing.T) {
 			name: "success",
 			args: args{
 				cfg: map[string]string{
-					config.KeyConnection: "HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=pwd",
-					config.KeyTable:      "CLIENTS",
+					common.ConfigurationConnection: "HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=pwd",
+					common.ConfigurationTable:      "CLIENTS",
 				},
 			},
 			wantErr: false,
@@ -55,7 +53,7 @@ func TestDestination_Configure(t *testing.T) {
 			name: "fail, missing connection",
 			args: args{
 				cfg: map[string]string{
-					config.KeyTable: "CLIENTS",
+					common.ConfigurationTable: "CLIENTS",
 				},
 			},
 			wantErr: true,
@@ -64,7 +62,7 @@ func TestDestination_Configure(t *testing.T) {
 			name: "fail, missing table",
 			args: args{
 				cfg: map[string]string{
-					config.KeyConnection: "HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=pwd",
+					common.ConfigurationConnection: "HOSTNAME=localhost;DATABASE=testdb;PORT=50000;UID=DB2INST1;PWD=pwd",
 				},
 			},
 			wantErr: true,
@@ -96,12 +94,12 @@ func TestDestination_Write(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		ctx := context.Background()
 
-		record := sdk.Record{
-			Operation: sdk.OperationCreate,
-			Key: sdk.StructuredData{
+		record := opencdc.Record{
+			Operation: opencdc.OperationCreate,
+			Key: opencdc.StructuredData{
 				"ID": 1,
 			},
-			Payload: sdk.Change{After: sdk.StructuredData{
+			Payload: opencdc.Change{After: opencdc.StructuredData{
 				"ID":   1,
 				"name": "test",
 			},
@@ -115,7 +113,7 @@ func TestDestination_Write(t *testing.T) {
 			writer: w,
 		}
 
-		c, err := d.Write(ctx, []sdk.Record{record})
+		c, err := d.Write(ctx, []opencdc.Record{record})
 		is.NoErr(err)
 
 		is.Equal(c, 1)
@@ -129,10 +127,10 @@ func TestDestination_Write(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		ctx := context.Background()
 
-		record := sdk.Record{
-			Operation: sdk.OperationSnapshot,
-			Position:  sdk.Position("1.0"),
-			Key: sdk.StructuredData{
+		record := opencdc.Record{
+			Operation: opencdc.OperationSnapshot,
+			Position:  opencdc.Position("1.0"),
+			Key: opencdc.StructuredData{
 				"ID": 1,
 			},
 		}
@@ -144,7 +142,7 @@ func TestDestination_Write(t *testing.T) {
 			writer: w,
 		}
 
-		_, err := d.Write(ctx, []sdk.Record{record})
+		_, err := d.Write(ctx, []opencdc.Record{record})
 		is.Equal(err != nil, true)
 	})
 }

@@ -14,6 +14,10 @@ jobs:
         with:
           go-version-file: 'go.mod'
 
+      - name: Install DB2 driver
+        run: |
+          go list -f "{{.Module.Version}}" github.com/ibmdb/go_ibm_db/installer | xargs -tI % go run github.com/ibmdb/go_ibm_db/installer@%
+
       # This step sets up the variable steps.golangci-lint-version.outputs.v
       # to contain the version of golangci-lint (e.g. v1.54.2).
       # The version is taken from go.mod.

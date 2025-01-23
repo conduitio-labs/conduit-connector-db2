@@ -143,3 +143,6 @@ You have to restart pipeline, tracking table will be recreated by connector.
 
 Yes. Stop the pipeline, change the value of the `table` in the Source configuration, 
 change the name of the tracking table using a pattern `CONDUIT_{{TABLE}}_{{SUFFIXNAME}}`
+
+
+![scarf pixel](https://static.scarf.sh/a.png?x-pxid=d9bd80d1-a155-4c94-8505-fdce284cbb78)

@@ -7,7 +7,7 @@ require (
 	github.com/conduitio/conduit-commons v0.5.1
 	github.com/conduitio/conduit-connector-sdk v0.12.0
 	github.com/golangci/golangci-lint v1.63.4
-	github.com/huandu/go-sqlbuilder v1.36.1
+	github.com/huandu/go-sqlbuilder v1.37.0
 	github.com/ibmdb/go_ibm_db v0.4.5
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/matryer/is v1.4.1
@@ -102,6 +102,7 @@ require (
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/hashicorp/yamux v0.1.1 // indirect
 	github.com/hexops/gotextdiff v1.0.3 // indirect
+	github.com/huandu/go-clone v1.7.3 // indirect
 	github.com/huandu/xstrings v1.5.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jgautheron/goconst v1.7.1 // indirect
